@@ -1,0 +1,23 @@
+{
+  "manifest_version": 3,
+  "name": "Reddit AI Comment Flagger",
+  "version": "0.1.0",
+  "description": "Locally flags Reddit comments that appear AI-generated.",
+  "permissions": ["storage"],
+  "host_permissions": [
+    "https://www.reddit.com/*",
+    "https://old.reddit.com/*",
+    "http://localhost:8000/*"
+  ],
+  "content_scripts": [
+    {
+      "matches": ["https://www.reddit.com/*", "https://old.reddit.com/*"],
+      "js": ["content.js"],
+      "css": ["styles.css"],
+      "run_at": "document_idle"
+    }
+  ],
+  "background": {
+    "service_worker": "background.js"
+  }
+}
