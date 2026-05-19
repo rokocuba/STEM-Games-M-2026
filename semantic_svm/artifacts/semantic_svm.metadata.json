@@ -1,0 +1,15 @@
+{
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "requested_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "svm_backend": "linear-svc",
+  "text_column": "comment",
+  "label_column": "label",
+  "label_to_id": {
+    "HUMAN": 0,
+    "AI": 1
+  },
+  "ai_class_id": 1,
+  "train_rows": 197355,
+  "dev_rows": 42289,
+  "metrics_path": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\dev_metrics.json"
+}

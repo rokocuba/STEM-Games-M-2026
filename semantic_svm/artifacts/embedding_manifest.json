@@ -1,0 +1,14 @@
+{
+  "embedding_model": "sentence-transformers/all-MiniLM-L6-v2",
+  "requested_model_name": "sentence-transformers/all-MiniLM-L6-v2",
+  "text_column": "comment",
+  "train_csv": "data\\train.csv",
+  "dev_csv": "data\\dev.csv",
+  "test_csv": "data\\test.csv",
+  "train_cache": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\embeddings\\train_37dd1b4a6647.npy",
+  "dev_cache": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\embeddings\\dev_63ee923cb34c.npy",
+  "test_cache": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\embeddings\\test_92613092fe2b.npy",
+  "max_train_rows": null,
+  "max_dev_rows": null,
+  "max_test_rows": null
+}
