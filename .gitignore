@@ -5,6 +5,7 @@ __pycache__/
 
 semantic_svm/artifacts/
 semantic_svm/model_cache/
+meta_model/artifacts/
 
 # LaTeX build artifacts
 *.aux
