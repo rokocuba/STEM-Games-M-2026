@@ -1,0 +1,21 @@
+feature,pearson_correlation_with_AI_label
+Sentences per paragraph,0.494774205154
+Question mark present,0.442313533042
+Words per paragraph,0.413511447471
+Contains but,0.361956267887
+Apostrophe present,0.360125479068
+Sentence length std dev,0.277069032993
+Hyphen present,0.233134897455
+Consecutive sentence gap,0.201601423849
+; or : present,-0.178906122446
+Right parenthesis present,-0.162650415022
+Contains numbers,-0.133981768316
+Any sentence <11 words,0.094064117934
+Uppercase >= 2x periods,-0.070460011528
+Contains others/researchers,0.064830142551
+Contains this,0.064632842909
+Contains because,0.045774139860
+Any sentence >34 words,0.039733520218
+Contains However,-0.032218712698
+Contains although,-0.024237905491
+Contains et,-0.016508958494
