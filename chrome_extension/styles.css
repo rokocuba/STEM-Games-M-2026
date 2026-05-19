@@ -1,0 +1,19 @@
+.ai-flagger-badge {
+  display: inline-block;
+  margin: 6px 0;
+  padding: 3px 7px;
+  border-radius: 999px;
+  font-size: 12px;
+  font-weight: 600;
+  border: 1px solid currentColor;
+}
+
+.ai-flagger-high {
+  color: #b42318;
+  background: #fff1f0;
+}
+
+.ai-flagger-medium {
+  color: #9a6700;
+  background: #fff8c5;
+}
