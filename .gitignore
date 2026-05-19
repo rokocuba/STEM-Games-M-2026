@@ -4,7 +4,6 @@ __pycache__/
 .prepare_datasets.py
 
 semantic_svm/model_cache/
-meta_model/artifacts/
 
 # LaTeX build artifacts
 *.aux

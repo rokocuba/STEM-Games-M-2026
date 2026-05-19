@@ -1,0 +1,16 @@
+{
+  "created_at": "2026-05-19T15:49:44",
+  "train_csv": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\data\\train.csv",
+  "dev_csv": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\data\\dev.csv",
+  "test_csv": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\data\\test.csv",
+  "svm_model": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\semantic_svm.joblib",
+  "svm_embedding_manifest": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\semantic_svm\\artifacts\\embedding_manifest.json",
+  "existing_tf_model_summary": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\tf_logreg_existing_joblib_summary.json",
+  "meta_model": "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\stacking_logreg_meta_model.joblib",
+  "probability_files": [
+    "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\train_oof_probabilities.csv",
+    "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\train_full_base_probabilities.csv",
+    "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\dev_probabilities.csv",
+    "C:\\Users\\roko.cubric\\osobno\\STEM-Games-M-2026\\meta_model\\artifacts\\test_probabilities.csv"
+  ]
+}

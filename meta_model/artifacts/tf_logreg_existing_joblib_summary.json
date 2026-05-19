@@ -1,0 +1,15 @@
+{
+  "exists": true,
+  "type": "Pipeline",
+  "contains_precomputed_probabilities": false,
+  "pipeline_steps": [
+    "features",
+    "classifier"
+  ],
+  "classes": [
+    "AI",
+    "HUMAN"
+  ],
+  "word_feature_count": 674790,
+  "char_feature_count": 682095
+}
