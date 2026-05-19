@@ -1,0 +1,654 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+\usepackage[hrvatski]{babel}
+\usepackage{pgfplots}
+\usepackage{hyperref}
+\usepackage{booktabs}
+\usepackage{graphicx}
+\pgfplotsset{compat=1.18}
+% 1. Proširivanje margina (postavlja sve na 3 cm, podesi po želji)
+\usepackage[margin=3cm]{geometry}
+
+% 2. Numeracija subsectiona kreće od 1 (umjesto 0.1, 1.1, itd.)
+\renewcommand{\thesubsection}{\arabic{subsection}}
+
+\begin{document}
+
+\section{Uvod}
+
+Društvene mreže danas obuhvaćaju više od 5,4 milijarde korisnika globalno. Uz stvarne ljude, na njima u velikoj mjeri djeluju botovi. 
+
+Dok \textit{good} botovi obavljaju korisne funkcije (agregacija vijesti, moderatori sadržaja, chatbotovi za podršku), \textit{bad} botovi predstavljaju ozbiljnu kibernetičku i društvenu prijetnju. Oni narušavaju povjerenje u online komunikaciju, manipuliraju javnim mnijenjem i šire dezinformacije. Razvoj alata za detekciju botova je zato ključan jer društvene mreže nagrađuju veliki angažman i gledanost bez obzira na autentičnost. Osim jednostavnih \textit{spam} botova, problem postaju sofisticirani društveni botovi koji oponašaju stvarne osobe.
+
+Osim detekcije botova na temelju broja objava, omjera pratitelja i vjerodostojnosti profila, naš projekt promatra sam tekst komentara i način na koji je komentar napisan. Ne pokušavamo dokazati tko stoji iza profila, nego procjenjujemo vjerojatnost da je pojedini komentar AI-generiran. Zbog veće preciznosti sustav spaja tri komplementarna pogleda u \textbf{ansambl modela} (\textit{ensemble learning}): semantički pogled na značenje komentara, strukturni pogled na građu rečenica i interpunkciju te leksički pogled na riječi, tokene i kratke znakovne obrasce. Izlazi tih podsustava zatim se kombiniraju završnim \textit{stacking} meta-modelom, koji daje konačnu procjenu AI autorstva.
+
+
+\section*{Matematička analiza: Aproksimirani uspon botova}
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={1. Kvadratna aproksimacija rasta "Bad Bot" prometa},
+            xlabel={Godina},
+            ylabel={Udio prometa (\%)},
+            xmin=2012, xmax=2028, 
+            ymin=15, ymax=55,      
+            xticklabel style={/pgf/number format/set thousands separator={}},
+            xtick={2013, 2015, 2017, 2019, 2021, 2023, 2025, 2027},
+            grid=both,
+            minor tick num=1,
+            legend pos=north west,
+            width=0.95\textwidth,
+            height=6.5cm,
+        ]
+            \addplot[blue, only marks, mark=*, mark size=2pt] coordinates {
+                (2013, 23.6) (2014, 22.8) (2015, 18.6) (2016, 19.9) 
+                (2017, 21.8) (2018, 20.4) (2019, 24.1) (2020, 25.6) 
+                (2021, 27.7) (2022, 30.2) (2023, 32.0) (2024, 37.0)
+                (2025, 40.0) 
+            };
+            \addlegendentry{Bad Bot podaci}
+
+            \addplot[red, ultra thick, domain=2013:2027.5, samples=100] {0.21*(x-2015.5)^2 + 19.5}; 
+            \addlegendentry{Trend rasta}
+            \draw[magenta, dashed, line width=1pt] (axis cs:2012,50) -- (axis cs:2028,50) node[pos=0.9, above, scale=0.7]{50\%};
+        \end{axis}
+    \end{tikzpicture}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={2. Ukupan udio botova (Bad + Good Bots)},
+            xlabel={Godina},
+            ylabel={Udio prometa (\%)},
+            xmin=2012, xmax=2028, 
+            ymin=30, ymax=65,      
+            xticklabel style={/pgf/number format/set thousands separator={}},
+            xtick={2013, 2015, 2017, 2019, 2021, 2023, 2025, 2027},
+            grid=both,
+            minor tick num=1,
+            legend pos=north west,
+            width=0.95\textwidth,
+            height=8.5cm,
+        ]
+            \addplot[teal, only marks, mark=square*, mark size=2pt] coordinates {
+                (2013, 43.0) (2014, 57.1) (2015, 45.6) (2016, 38.7) 
+                (2017, 42.2) (2018, 37.9) (2019, 37.2) (2020, 40.8) 
+                (2021, 42.3) (2022, 47.4) (2023, 49.6) (2024, 51.0)
+                (2025, 53.0)
+            };
+            \addlegendentry{Ukupni podaci}
+
+            \addplot[orange, ultra thick, domain=2013:2028, samples=100] {0.15814*x^2 - 639.186*x + 645164}; 
+            \addlegendentry{Kvadratna regresija}
+            \draw[magenta, dashed, line width=1pt] (axis cs:2012,50) -- (axis cs:2028,50) node[pos=0.1, above, scale=0.7]{50\%};
+        \end{axis}
+    \end{tikzpicture}
+    \caption{\footnotesize \textit{Izvor: Statista, Human and bot web traffic share.} \url{https://www.statista.com/statistics/1264226/human-and-bot-web-traffic-share/}}
+\end{figure}
+
+\subsection*{Kratka interpretacija anomalije iz 2014.}
+Nagli skok bot prometa u 2014. godini uzrokovan je masovnim sigurnosnim skeniranjima (Heartbleed, Shellshock) i intenzivnim indeksiranjem web stranica. Naknadni pad rezultat je uvođenja boljih sustava zaštite (poput Cloudflarea) i optimizacije rada tražilica, prije novog vala rasta potaknutog modernim AI alatima.
+
+\begin{table}[h!]
+\centering
+\caption{Ključne metrike internetskog prometa i sigurnosti (Izvještaj 2026.)}
+\vspace{2mm}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Kategorija} & \textbf{Metrika} & \textbf{Vrijednost} \\ \midrule
+\textbf{Promet} & Udio botova u ukupnom prometu & 53\% \\
+ & Udio ljudskog prometa & 47\% \\
+\textbf{Sigurnost} & Udio "loših" (bad) botova & 40\% \\
+ & Godišnji porast AI bot napada & 12.5x \\
+\textbf{Infrastruktura} & Bot napadi na API-je & 27\% \\
+ & Bot napadi na poslovnu logiku & 21\% \\
+\textbf{Metode} & Botovi koji koriste Chrome za prikrivanje & 41\% \\
+\textbf{Industrija} & Napadi na financijske usluge & 24\% \\
+ & Preuzimanje računa (ATO) u financijama & 46\% \\ \bottomrule
+\end{tabular}
+\begin{flushleft}
+\footnotesize \textit{Izvor: Analiza Bad Bot Report 2026 (Thales/Imperva).} \url{https://www.imperva.com/resources/resource-library/reports/2026-bad-bot-report/}
+\end{flushleft}
+\end{table}
+\subsection{Semantički SVM kao podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Uvođenje ovoga podsustava polazi od pretpostavke da se znatan dio AI-generiranih komentara ne razlikuje samo po stilu pisanja, nego i po semantičkoj namjeni. Takvi su komentari često oblikovani tako da pojačaju angažman: izazovu ljutnju, prodube političku ili ideološku podjelu, zaoštre raspravu ili potaknu niz daljnjih reakcija. Zbog toga je razumno očekivati da se u prostoru značenja pojavljuju obrasci koji nisu slučajni i koje je moguće geometrijski razdvajati. Ne tvrdi se da svaki AI komentar nužno ima takvu funkciju, nego da je taj signal dovoljno čest da ga vrijedi zasebno modelirati. U tom smislu ovaj podsustav ne traži samo pojedine riječi, nego pokušava razdvojiti komentare prema njihovoj semantičkoj ulozi.
+
+Semantički SVM pridružuje komentaru $t$ vrijednost
+
+\[
+p_{\mathrm{sem}}(t) \approx P(y=1\mid t),
+\]
+
+pri čemu $y=1$ označava razred \texttt{AI}, a $y=0$ razred \texttt{HUMAN}. Ta se vrijednost dalje koristi kao jedan od triju ulaza završnog modela.
+
+\paragraph{Vektorski prikaz i predobrada.}
+Tekst se najprije prevodi u semantički vektorski prikaz $x$, zatim normira
+
+\[
+\hat{x}=\frac{x}{\|x\|_2},
+\]
+
+a potom standardizira po koordinatama
+
+\[
+z_j=\frac{\hat{x}_j-\mu_j}{\sigma_j}.
+\]
+
+L2-normiranje uklanja razlike u duljini vektora, dok standardizacija usklađuje mjerila pojedinih koordinata prije učenja linearnog razdjelnika.
+
+Takav je slijed važan jer SVM ne radi nad rečenicama kao nizovima znakova, nego nad točkama u prostoru $\mathbb{R}^d$. Model za vektorske prikaze teksta (\textit{embedding model}) već je prije toga proveo nelinearno semantičko preslikavanje teksta u vektor, pa klasifikator više ne razdvaja ``riječi'', nego geometrijske položaje komentara u dobivenom prostoru.
+
+\paragraph{Zašto je linearan razdjelnik ovdje prirodan izbor.}
+Nakon izrade embeddinga tekst više nije prikazan u izvornom prostoru, nego u prostoru semantičkih značajki. Složeniji, nelinearni dio posla već je obavio model za vektorske prikaze. Zbog toga linearan SVM u tom novom prostoru često daje vrlo dobar kompromis između interpretabilnosti, brzine i točnosti. Drugim riječima, nelinearnost je sadržana u prikazu, a ne u samoj završnoj klasifikacijskoj funkciji.
+
+\paragraph{Funkcija odluke i geometrija margine.}
+Nad vektorom $z$ uči se linearna funkcija odluke
+
+\[
+f(z)=w^\top z+b.
+\]
+
+Granica razdvajanja zadana je jednadžbom $w^\top z+b=0$, a rubovi margine jednadžbama $w^\top z+b=\pm 1$. Budući da širina margine iznosi
+
+\[
+\frac{2}{\|w\|_2},
+\]
+
+minimizacija člana $\frac{1}{2}\|w\|_2^2$ ekvivalentna je maksimizaciji margine. Model, dakle, traži što širi pojas razdvajanja dvaju razreda.
+
+To se može pokazati izravno. Neka su $z_+$ i $z_-$ točke na dvama rubovima margine, pa vrijedi
+
+\[
+w^\top z_+ + b = 1,
+\qquad
+w^\top z_- + b = -1.
+\]
+
+Oduzimanjem dobivamo
+
+\[
+w^\top (z_+ - z_-) = 2.
+\]
+
+Najkraća udaljenost dviju paralelnih hiperravnina mjeri se u smjeru njihova normale $w$, pa je $z_+ - z_- = \lambda w$ za neki skalar $\lambda$. Uvrštavanjem slijedi
+
+\[
+w^\top(\lambda w)=\lambda\|w\|_2^2=2,
+\qquad
+\lambda=\frac{2}{\|w\|_2^2}.
+\]
+
+Stoga je udaljenost između rubova margine
+
+\[
+\|z_+-z_-\|_2 = |\lambda|\,\|w\|_2 = \frac{2}{\|w\|_2}.
+\]
+
+Upravo zato minimizacija norme vektora $w$ znači širenje margine.
+
+\paragraph{Optimizacija meke margine.}
+Za oznake $\tilde y_i\in\{-1,+1\}$ rješava se problem
+
+\[
+\min_{w,b,\xi}\;\frac{1}{2}\|w\|_2^2 + C\sum_{i=1}^n \xi_i
+\]
+
+uz ograničenja
+
+\[
+\tilde y_i(w^\top z_i+b)\ge 1-\xi_i,
+\qquad
+\xi_i\ge 0.
+\]
+
+Polazište je tvrda margina (\textit{hard margin}), gdje bi se zahtijevalo $\tilde y_i(w^\top z_i+b)\ge 1$ za svaki primjer. Budući da stvarni tekstualni podaci nisu savršeno razdvojivi, uvodi se meka margina (\textit{soft margin}) preko varijabli $\xi_i$.
+
+Izraz $\tilde y_i(w^\top z_i+b)$ objedinjuje oba razreda u jednom uvjetu: pozitivan je kada je primjer na ispravnoj strani granice, a negativan kada je pogrešno razvrstan. Time jedno ograničenje istodobno pokriva i AI i HUMAN razred. Varijabla $\xi_i$ mjeri povredu idealne margine, pa vrijedi: $\xi_i=0$ za ispravno razvrstane primjere izvan margine, $0<\xi_i<1$ za primjere unutar margine, $\xi_i=1$ za primjere točno na granici odluke, a $\xi_i>1$ za pogrešno razvrstane primjere. Parametar $C$ određuje odnos između širine margine i kazne za pogreške: veći $C$ snažnije kažnjava povrede, a manji $C$ dopušta pravilniju, ali fleksibilniju granicu.
+
+Isti se problem može zapisati i preko hinge-gubitka
+
+\[
+\ell_{\mathrm{hinge}}(\tilde y,f(z)) = \max\{0,1-\tilde y f(z)\},
+\]
+
+pa optimizacijska zadaća poprima oblik
+
+\[
+\min_{w,b}\;\frac{1}{2}\|w\|_2^2 + C\sum_{i=1}^n \max\{0,1-\tilde y_i(w^\top z_i+b)\}.
+\]
+
+Taj zapis jasno pokazuje zašto primjeri daleko od granice ne pridonose gubitku, dok primjeri unutar margine i pogrešno razvrstani primjeri nose kaznu.
+
+\paragraph{Dualna formulacija i računalna provedba.}
+U dualnoj formulaciji vrijedi
+
+\[
+w=\sum_{i=1}^n \alpha_i \tilde y_i z_i,
+\]
+
+pa na granicu razdvajanja bitno utječu samo primjeri s $\alpha_i>0$, odnosno potporni vektori. Oni su geometrijski oni primjeri koji ``nose'' razdvajanje: leže na rubu margine ili narušavaju njezine uvjete. Ta formulacija objašnjava zašto o svim primjerima ne ovisi završna granica jednako.
+
+U klasičnom kernel-SVM pristupu dualni se problem često rješava metodama poput SMO postupka, jer je tada prirodno raditi s unutarnjim produktima među primjerima. U stvarnoj provedbi ovoga podsustava to nije slučaj: ovdje se koristi \texttt{LinearSVC} nad standardiziranim semantičkim prikazima. Zato je dualna slika važna za matematičko razumijevanje modela, ali nije doslovan opis numeričkog postupka koji se izvršava u kodu.
+
+\paragraph{Vjerojatnosna kalibracija.}
+SVM izravno daje potpisanu vrijednost funkcije odluke
+
+\[
+s=f(z)=w^\top z+b,
+\]
+
+a ne vjerojatnost. Zbog toga se primjenjuje Plattova kalibracija
+
+\[
+P(y=1\mid s)\approx \frac{1}{1+\exp(As+B)}.
+\]
+
+To ima jasnu interpretaciju: velike pozitivne vrijednosti $s$ trebaju odgovarati vjerojatnostima bliskima $1$, velike negativne vrijednosti vjerojatnostima bliskima $0$, a prijelaz oko granice odvija se glatko, bez skokova. Parametri $A$ i $B$ određuju nagib i položaj te sigmoidne preslikbe.
+
+Parametri $A$ i $B$ uče se isključivo na skupu za učenje, i to trostrukom unakrsnom kalibracijom: u svakom presjeku bazni \texttt{LinearSVC} trenira se na dvjema trećinama podataka, na preostaloj trećini računaju se vrijednosti funkcije odluke, a na njima se zatim prilagođava sigmoidna funkcija. Time se izbjegava kalibriranje na istim vrijednostima na kojima je razdjelnik upravo naučen. Završna procjena dobiva se kao prosjek triju kalibriranih vjerojatnosti. Razvojni skup pritom ostaje odvojen i služi samo za vrednovanje.
+
+\paragraph{Izlaz podsustava.}
+Za pojedini komentar podsustav vraća kalibriranu vjerojatnost $p_{\mathrm{sem}}(t)$. Kad bi se koristio samostalno, binarna bi odluka mogla biti zadana pravilom
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{sem}}(t)\ge 0.5\}.
+\]
+
+U ovom radu to nije središnje, jer završni model koristi samu vjerojatnost, a ne unaprijed zadani prag.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Na punom skupu za učenje, uz unaprijed izračunate semantičke embeddinge, dobivene su vrijednosti točnosti $0.90948$, preciznosti $0.90341$, odziva $0.91283$, mjere $F_1=0.90810$ i pokazatelja $\mathrm{ROC\ AUC}=0.96885$. Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 19549 & 2022 \\
+y=1 & 1806 & 18912
+\end{array}
+\]
+
+što pokazuje da podsustav dobro razdvaja razrede i daje pouzdanu procjenu vjerojatnosti AI razreda.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najizravnije poboljšanje ovoga podsustava jest zamjena sadašnjeg modela za izradu semantičkih embeddinga snažnijim modelom, uz zadržavanje iste SVM i kalibracijske sheme. Drugim riječima, ne mijenja se klasifikator, nego kvaliteta prikaza na kojem on radi. U sadašnjoj izvedbi korišten je \texttt{all-MiniLM-L6-v2} zbog brzine, dok bi prirodan sljedeći korak bio \texttt{BAAI/bge-small-en-v1.5}, a uz više računalnih resursa i veći modeli iste namjene. Takva je izmjena tehnički jednostavna, ali računski skuplja, jer najveći dio vremena i dalje otpada na izradu semantičkih embeddinga.
+
+\subsection{Stablasti model kao podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Ovaj podsustav polazi od drukčije pretpostavke od semantičkog SVM-a. Ovdje se ne traži primarno što komentar \emph{znači}, nego \emph{kako je građen}. U praksi se pokazuje da se mnogi AI-generirani komentari razlikuju po makro-strukturi, ritmu rečenica i interpunkcijskoj uporabi: češće su dulji, imaju više rečenica po odlomku, više upitnika, više apostrofa, veću varijabilnost duljine rečenica i češće koriste obrasce koji potiču nastavak interakcije. S druge strane, ljudski komentari češće zadržavaju neke obrasce koji su manje ``angažmanski agresivni'', primjerice zagrade, točku-zarez, dvotočku ili brojčane reference. Zbog toga ima smisla zasebno modelirati strukturni sloj komentara i dopustiti stablastom modelu da upravo na takvim pravilima gradi odluku.
+
+\paragraph{Ulazne značajke.}
+Svaki se komentar prevodi u vektor
+
+\[
+x \in \mathbb{R}^{20},
+\]
+
+pri čemu komponente vektora opisuju rečenične i odlomkovne heuristike. Među njima su: broj rečenica po odlomku, broj riječi po odlomku, prisutnost zatvorene zagrade, crtice, točke-zareza ili dvotočke, upitnika i apostrofa, standardna devijacija duljine rečenica, prosječna razlika duljina uzastopnih rečenica, prisutnost vrlo kratkih i vrlo dugih rečenica te binarni pokazatelji za izraze poput \texttt{although}, \texttt{however}, \texttt{but}, \texttt{because}, \texttt{this}, \texttt{others/researchers}, brojeve i \texttt{et}.
+
+Empirijski nalazi iz skupa za učenje potvrđuju da takve značajke nose signal. Korelacija s AI oznakom najveća je za broj rečenica po odlomku $(0.495)$, prisutnost upitnika $(0.442)$, broj riječi po odlomku $(0.414)$, prisutnost riječi \texttt{but} $(0.362)$ i apostrofa $(0.360)$. S druge strane, negativnu korelaciju s AI oznakom imaju prisutnost točke-zareza ili dvotočke $(-0.179)$, zatvorene zagrade $(-0.163)$ i brojčanih referenci $(-0.134)$. To znači da model ne polazi od proizvoljno zadanih pravila, nego od obrazaca koji su u podacima doista uočljivi.
+
+\paragraph{Pojedinačno stablo kao osnovni mehanizam odluke.}
+Ako se promatra jedno stablo odluke, tada se u svakom unutarnjem čvoru provjerava uvjet oblika
+
+\[
+x_k \le \tau,
+\]
+
+gdje je $x_k$ jedna od 20 značajki, a $\tau$ pripadni prag. Ako je uvjet zadovoljen, primjer se šalje u lijevu granu; inače u desnu. Taj se postupak ponavlja sve do lista.
+
+Na razini jednog stabla list sadrži lokalnu procjenu razredne pripadnosti. Ako u listu ima $n_{\mathrm{H}}$ ljudskih i $n_{\mathrm{AI}}$ AI primjera, prirodna procjena AI-vjerojatnosti glasi
+
+\[
+p_{\mathrm{leaf}}(x)=\frac{n_{\mathrm{AI}}}{n_{\mathrm{H}}+n_{\mathrm{AI}}}.
+\]
+
+Upravo je zato pojedinačno stablo vrlo pogodno za objašnjavanje: odluka se može pratiti kao konačan niz pragova nad čitljivim značajkama.
+
+\paragraph{Gradijentno pojačavanje stabala (\textit{gradient boosting}).}
+Stvarna klasifikacijska inačica ovoga podsustava ne koristi jedno stablo, nego ansambl stabala dobiven gradijentnim pojačavanjem, konkretno \texttt{HistGradientBoostingClassifier}. Ideja je da se ne traži jedno veliko stablo koje mora samo riješiti cijeli problem, nego niz plitkih stabala koja se nadovezuju jedno na drugo i postupno ispravljaju prethodne pogreške.
+
+Ako je s $T_m(x)$ označen doprinos $m$-tog stabla, tada se ukupni rezultat odluke može zapisati u obliku
+
+\[
+F_M(x)=\beta_0 + \eta \sum_{m=1}^{M} T_m(x),
+\]
+
+gdje je $\beta_0$ početni član, $\eta$ stopa učenja, a $M$ broj stabala. Za binarnu klasifikaciju zatim se iz toga rezultata dobiva AI-vjerojatnost logističkom preslikbom
+
+\[
+p_{\mathrm{tree}}(x)=\frac{1}{1+e^{-F_M(x)}}.
+\]
+
+U ovoj provedbi koriste se parametri \texttt{max\_depth=5}, \texttt{learning\_rate=0.06}, \texttt{max\_iter=300} i \texttt{min\_samples\_leaf=15}, uz rano zaustavljanje na izdvojenom dijelu skupa za učenje. Histogramska varijanta (\textit{histogram-based}) dodatno ubrzava učenje tako što kontinuirane značajke najprije grupira u binove, pa se pragovi više ne traže nad svim mogućim realnim vrijednostima, nego nad histogramiziranim prikazom podataka.
+
+\paragraph{Zašto je stablasta metoda ovdje prikladna.}
+Ovakav model ima dvije važne prednosti. Prvo, može prirodno modelirati nelinearne interakcije među značajkama. Nije isto je li komentar dug sam po sebi ili je istodobno dug, pun upitnika i s velikom varijabilnošću duljine rečenica; stablo i ansambl stabala takve kombinacije hvataju mnogo prirodnije od jedne linearne granice. Drugo, stablasti modeli ne zahtijevaju standardizaciju značajki na isti način kao linearni modeli, jer odluku temelje na usporedbi s pragovima, a ne na udaljenosti u linearnom prostoru.
+
+\paragraph{Odnos između glavnog modela i objašnjive inačice.}
+Za stvarnu klasifikaciju koristi se model s gradijentnim pojačavanjem, jer daje bolji rezultat na razvojnom skupu. Ipak, u repozitoriju postoji i način rada s jednim \texttt{DecisionTreeClassifier}-om. Ta inačica nije uvedena zato što je točnija, nego zato što omogućuje doslovan prolaz od korijena do lista za pojedini komentar. Time se dobiva egzaktan, vizualno čitljiv slijed pravila tipa ``broj rečenica po odlomku $> 2.595$'' ili ``prisutan upitnik'', što je korisno kada se želi objasniti jednu konkretnu odluku.
+
+\paragraph{Izlaz podsustava.}
+Za komentar $t$ podsustav vraća vjerojatnost
+
+\[
+p_{\mathrm{tree}}(t) \approx P(y=1\mid t),
+\]
+
+gdje $y=1$ ponovno označava razred \texttt{AI}. Kad bi se model koristio samostalno, binarna bi se odluka mogla zadati pravilom
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{tree}}(t)\ge 0.5\}.
+\]
+
+U završnom sustavu važniji je sam realni broj $p_{\mathrm{tree}}(t)$ nego tvrda odluka, jer se ta vjerojatnost dalje kombinira s preostalim podsustavima.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Pokretanjem zadanog modela s gradijentnim pojačavanjem nad skupovima \texttt{train.csv} i \texttt{dev.csv} dobivene su vrijednosti točnosti $0.9049$, uravnotežene točnosti $0.9051$, preciznosti $0.8921$, odziva $0.9166$, mjere $F_1=0.9042$ i pokazatelja $\mathrm{ROC\ AUC}=0.9670$. Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 19275 & 2296 \\
+y=1 & 1727 & 18991
+\end{array}
+\]
+
+što pokazuje da model vrlo dobro razdvaja razrede i pritom zadržava vrlo snažnu sposobnost rangiranja.
+
+\paragraph{Važnost značajki.}
+Permutacijska važnost značajki potvrđuje da odluka modela nije raspodijeljena ravnomjerno po svim ulazima. Najveći doprinos imaju broj riječi po odlomku $(0.1632)$ i broj rečenica po odlomku $(0.0873)$, a zatim prisutnost apostrofa $(0.0182)$, upitnika $(0.0173)$, standardna devijacija duljine rečenica $(0.0146)$ i razlika duljina uzastopnih rečenica $(0.0089)$. Među važnijim signalima pojavljuju se još brojčane reference $(0.0072)$, zatvorena zagrada $(0.0070)$, crtica $(0.0044)$ i točka-zarez ili dvotočka $(0.0036)$. To je u skladu s ranijom korelacijskom analizom: model najveću težinu daje upravo onim strukturnim obilježjima na kojima se AI i HUMAN komentari u podacima najjasnije razilaze.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.95\textwidth]{\detokenize{Tree_Based_Model/artifacts/tree_based_feature_importances.png}}
+    \caption{Permutacijska važnost značajki u stablastom modelu. Najveći doprinos imaju broj riječi i broj rečenica po odlomku, dok ostale značajke djeluju kao slabiji, ali korisni dodatni signali.}
+\end{figure}
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najjednostavniji put do jače inačice ovoga podsustava nije zamjena samog klasifikatora, nego proširenje ulaznog skupa značajki. U istom direktoriju već postoje dodatne analize koje bilježe makro-strukturna pravila, prijelazne fraze, obrasce obraćanja, retoričke prijelaze i slične obrasce, ali ti signali još nisu svi uključeni u završni 20-dimenzionalni vektor na kojem se model trenira. Stoga je prirodan sljedeći korak ugraditi takve već izmjerene značajke u funkciju za ekstrakciju obilježja i zatim ponovno istrenirati isti model s gradijentnim pojačavanjem. To je tehnički jednostavno, a ima smisla upravo zato što su mnoge od tih razlika već empirijski potvrđene u pripadnim artefaktima.
+
+\subsection{TF-IDF logistička regresija kao podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Ovaj podsustav promatra komentar kao tekstualni niz i traži lokalne leksičke i znakovne obrasce. Za razliku od semantičkog SVM-a, ovdje se ne koristi gusti semantički embedding rečenice; za razliku od stablastog modela, ne koriste se ručno zadane strukturne značajke. Model izravno uči iz riječi, parova riječi i kratkih nizova znakova. Takav pristup je osobito koristan jer AI-generirani komentari često ponavljaju karakteristične fraze, prijelaze, ritam izražavanja, interpunkcijske obrasce i dijelove formulacija koji se mogu uhvatiti bez dubljeg razumijevanja značenja.
+
+Za komentar $t$ ovaj podsustav daje vjerojatnost
+
+\[
+p_{\mathrm{tf}}(t) \approx P(y=1\mid t),
+\]
+
+gdje $y=1$ označava razred \texttt{AI}. Ta se vrijednost dalje koristi kao treći bazni ulaz završnog \textit{stacking} modela.
+
+\paragraph{TF-IDF prikaz teksta.}
+Tekst se najprije pretvara u rijedak (\textit{sparse}) vektor značajki pomoću dvaju TF-IDF prikaza. Prvi prikaz koristi riječi i parove uzastopnih riječi, odnosno unigram i bigram značajke. Drugi prikaz koristi znakovne $n$-grame duljina od $3$ do $5$. U provedbi su to dvije komponente \texttt{FeatureUnion}-a: \texttt{word\_tfidf} i \texttt{char\_tfidf}.
+
+Za značajku $g$ i komentar $t$ neka je $c_{t,g}$ broj pojavljivanja značajke $g$ u komentaru. Budući da je u modelu uključeno sublinearno skaliranje frekvencije, lokalni dio težine glasi
+
+\[
+\operatorname{tf}(t,g)=
+\begin{cases}
+1+\log c_{t,g}, & c_{t,g}>0,\\
+0, & c_{t,g}=0.
+\end{cases}
+\]
+
+Ako je $N$ broj komentara u skupu za učenje, a $\operatorname{df}(g)$ broj komentara u kojima se značajka $g$ pojavljuje, inverzna dokumentna frekvencija u standardnoj zaglađenoj inačici može se zapisati kao
+
+\[
+\operatorname{idf}(g)=\log\frac{1+N}{1+\operatorname{df}(g)}+1.
+\]
+
+Neobrađena TF-IDF težina zatim je
+
+\[
+\tilde x_g(t)=\operatorname{tf}(t,g)\operatorname{idf}(g),
+\]
+
+a dobiveni vektor se L2-normalizira. Time vrlo česte riječi dobivaju manju relativnu važnost, dok izrazi koji su dovoljno česti da budu pouzdani, ali nisu svugdje prisutni, dobivaju jači signal.
+
+\paragraph{Riječni i znakovni $n$-grami.}
+Riječni dio modela koristi $n$-grame duljina $1$ i $2$. On hvata izraze poput pojedinačnih ključnih riječi, čestih fraza i lokalnih kombinacija riječi. Znakovni dio koristi $n$-grame duljina od $3$ do $5$, pa može uhvatiti i obrasce unutar riječi, dijelove sufiksa, interpunkcijske prijelaze, kontrakcije i tipične fragmente koji ne moraju biti cijele riječi.
+
+Konačni vektor dobiva se konkatenacijom ta dva prikaza:
+
+\[
+x(t)=
+\begin{bmatrix}
+x_{\mathrm{word}}(t)\\
+x_{\mathrm{char}}(t)
+\end{bmatrix}
+\in\mathbb{R}^{d}.
+\]
+
+U finalnom modelu spremljenom za \textit{stacking} rječnik riječnih TF-IDF značajki ima $793698$ elemenata, a rječnik znakovnih TF-IDF značajki $763983$ elemenata. Ukupno je dakle
+
+\[
+d=1557681
+\]
+
+rijetkih značajki. Iako je dimenzija vrlo velika, svaki pojedini komentar aktivira samo mali dio tih značajki, pa je računanje učinkovito.
+
+\paragraph{Logistička regresija nad rijetkim tekstualnim vektorom.}
+Nakon vektorizacije trenira se logistička regresija s L2-regularizacijom i uravnoteženim težinama razreda. Za razred $c$ model računa linearni rezultat
+
+\[
+s_c(x)=w_c^\top x+b_c.
+\]
+
+Vjerojatnost razreda dobiva se normalizacijom tih rezultata. Za AI razred to možemo zapisati kao
+
+\[
+p_{\mathrm{tf}}(t)
+=P(y=\texttt{AI}\mid x(t))
+=\frac{\exp(s_{\texttt{AI}}(x(t)))}{\exp(s_{\texttt{AI}}(x(t)))+\exp(s_{\texttt{HUMAN}}(x(t)))}.
+\]
+
+U binarnom slučaju taj je zapis ekvivalentan sigmoidnoj funkciji nad jednom linearnom kombinacijom značajki. Važno je da model ostaje linearan u TF-IDF prostoru: pojedini koeficijent govori koliko prisutnost odgovarajućeg $n$-grama pomiče odluku prema jednom ili drugom razredu.
+
+Optimizacija se može opisati minimizacijom regulariziranog logističkog gubitka
+
+\[
+\min_w\;
+\sum_{i=1}^{n}\alpha_{y_i}
+\left[-y_i\log p_i-(1-y_i)\log(1-p_i)\right]
++\lambda\|w\|_2^2,
+\]
+
+gdje su $\alpha_{y_i}$ težine razreda. U provedbi se koristi \texttt{class\_weight=balanced}, pa rjeđi razred dobiva veću težinu u gubitku. Time se smanjuje opasnost da model jednostavno favorizira brojniji razred.
+
+\paragraph{Zašto je ovakav model prikladan.}
+TF-IDF logistička regresija vrlo je jednostavna, ali je posebno jaka za zadatke u kojima razredi imaju prepoznatljive tekstualne obrasce. Velika prednost je što model ne mora učiti duboki jezični prikaz od početka: on samo traži koji su $n$-grami statistički povezani s razredom. Zbog toga je brz, jeftin za treniranje i vrlo dobar kao bazni model.
+
+Druga važna prednost je komplementarnost. Semantički SVM može uhvatiti značenje komentara, a stablasti model makro-strukturu, ali TF-IDF logistička regresija hvata sitne lokalne tragove koje ta dva modela mogu propustiti. Upravo zato je korisna kao treći ulaz završnog meta-modela.
+
+\paragraph{Izlaz podsustava.}
+Spremljeni \texttt{sklearn} pipeline sadrži i TF-IDF vektorizatore i logistički klasifikator. Zato se novi komentar može izravno predati modelu, a funkcija \texttt{predict\_proba} vraća vjerojatnosti razreda. U finalnom spremljenom modelu poredak klasa je
+
+\[
+\texttt{AI},\quad \texttt{HUMAN},
+\]
+
+pa se za izlaz podsustava uzima stupac koji pripada razredu \texttt{AI}. Kad bi se model koristio samostalno, binarna odluka mogla bi se zadati pravilom
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{tf}}(t)\ge 0.5\}.
+\]
+
+U završnom sustavu ponovno je važnija sama vjerojatnost $p_{\mathrm{tf}}(t)$, jer je ona ulaz u \textit{stacking} meta-model.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Na razvojnom skupu finalni TF-IDF logistički model postiže točnost $0.98085$, preciznost $0.98627$, odziv $0.97447$, mjeru $F_1=0.98033$ i pokazatelj $\mathrm{ROC\ AUC}=0.99780$. Budući da model vraća vjerojatnosti, korisne su i vjerojatnosne metrike: logaritamski gubitak iznosi $0.06739$, a Brierova mjera $0.01626$.
+
+Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 21290 & 281 \\
+y=1 & 529 & 20189
+\end{array}
+\]
+
+Ovaj podsustav je najjači pojedinačni bazni model u trenutnoj izvedbi. Ipak, završni meta-model dodatno poboljšava rezultat jer iskorištava slučajeve u kojima se TF-IDF signal može potvrditi ili ispraviti semantičkim i strukturnim signalom.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najjednostavnije poboljšanje ovoga podsustava bilo bi sustavno podešavanje hiperparametara TF-IDF prikaza i logističke regresije: primjerice vrijednosti \texttt{min\_df}, \texttt{max\_df}, raspona riječnih i znakovnih $n$-grama te regularizacijskog parametra $C$. Drugi prirodan korak je dodatna kalibracija vjerojatnosti, jer je završnom \textit{stacking} modelu važna kvaliteta samih vjerojatnosti, a ne samo točnost binarne odluke. Takve izmjene ne bi promijenile osnovnu ideju modela, nego bi samo preciznije prilagodile istu linearnu metodu podacima.
+
+\subsection{Stacking meta-model kao završni podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Tri prethodna podsustava promatraju komentar iz različitih kutova. Semantički SVM opisuje značenje komentara, stablasti model opisuje njegovu strukturu, a TF-IDF logistička regresija hvata lokalne leksičke i znakovne obrasce. Nijedan od tih pogleda nije sam po sebi potpun. Zato završni model ne pokušava ponovno analizirati sirovi tekst, nego uči kako kombinirati njihove tri vjerojatnosne procjene. Time se problem svodi na kontrolirano pitanje: kada vjerovati kojem podsustavu i što učiniti kada se njihovi izlazi međusobno slažu ili razilaze.
+
+Za komentar $t$ bazni podsustavi daju tri vrijednosti
+
+\[
+p_{\mathrm{sem}}(t),
+\qquad
+p_{\mathrm{tree}}(t),
+\qquad
+p_{\mathrm{tf}}(t),
+\]
+
+pri čemu svaka vrijednost pripada intervalu $[0,1]$ i predstavlja procjenu vjerojatnosti da je komentar AI-generiran. Završni cilj je naučiti funkciju
+
+\[
+p_{\mathrm{meta}}(t) \approx P(y=1\mid p_{\mathrm{sem}},p_{\mathrm{tree}},p_{\mathrm{tf}}),
+\]
+
+gdje $y=1$ označava razred \texttt{AI}.
+
+\paragraph{Out-of-fold predikcije (\textit{OOF}).}
+Najvažniji tehnički dio ovoga podsustava jest način na koji se trenira završni model. Meta-model ne smije učiti na predikcijama baznih modela koje su dobivene na istim primjerima na kojima su ti bazni modeli trenirani. U suprotnom bi ulazi meta-modela bili preoptimistični i ne bi dobro opisivali ponašanje na neviđenim komentarima.
+
+Zato se koristi out-of-fold postupak. Skup za učenje dijeli se na $K=5$ stratificiranih dijelova. Za svaki fold treniraju se tri bazna modela na preostalih $K-1$ dijelova, a zatim se njihove vjerojatnosti računaju na izostavljenom dijelu. Nakon svih foldova svaki primjer iz skupa za učenje ima trojku
+
+\[
+\bigl(p_{\mathrm{sem}},p_{\mathrm{tree}},p_{\mathrm{tf}}\bigr)
+\]
+
+dobivenu od modela koji taj primjer nije vidio tijekom treniranja. Tek se na tim OOF predikcijama uči logistički meta-model.
+
+\paragraph{Finalni bazni modeli.}
+OOF modeli iz foldova služe samo za izgradnju poštenog skupa za učenje meta-modela. Za završne predikcije koristi se druga faza: jedan finalni semantički SVM, jedan finalni stablasti model i jedan finalni TF-IDF logistički model trenirani na cijelom skupu za učenje. To odgovara varijanti u kojoj se OOF koristi za učenje načina kombiniranja, a zatim se za stvarnu primjenu koriste najjači dostupni bazni modeli, jer su učeni na 100\% podataka.
+
+U trenutnoj provedbi semantički SVM učitava se iz već spremljenog modela, dok se finalni stablasti model i finalni TF-IDF logistički model ponovno treniraju na cijelom \texttt{train.csv}. Time se dobivaju bazne vjerojatnosti za \texttt{dev.csv} i \texttt{test.csv}.
+
+\paragraph{Logit-transformacija i interakcije.}
+Sirove vjerojatnosti najprije se pretvaraju u logit-oblik
+
+\[
+\ell_i = \log\frac{p_i}{1-p_i}.
+\]
+
+U provedbi se prije toga vjerojatnosti režu na interval $[10^{-5},1-10^{-5}]$ kako bi se izbjegle beskonačne vrijednosti. Logit-oblik je prirodniji za logistički završni model, jer pretvara vjerojatnost u logaritam omjera izgleda (\textit{log-odds}).
+
+Ako označimo
+
+\[
+\ell_1=\operatorname{logit}(p_{\mathrm{sem}}),
+\qquad
+\ell_2=\operatorname{logit}(p_{\mathrm{tree}}),
+\qquad
+\ell_3=\operatorname{logit}(p_{\mathrm{tf}}),
+\]
+
+meta-model koristi devet značajki:
+
+\[
+\ell_1,
+\ell_2,
+\ell_3,
+\ell_1\ell_2,
+\ell_1\ell_3,
+\ell_2\ell_3,
+\ell_1^2,
+\ell_2^2,
+\ell_3^2.
+\]
+
+Parne interakcije omogućuju modelu da razlikuje slučajeve u kojima se dva podsustava slažu od slučajeva u kojima jedan model snažno proturječi drugome. Kvadratni članovi dopuštaju drukčije ponašanje kod vrlo sigurnih predikcija nego kod predikcija blizu $0.5$. Trostruki produkt nije uključen, jer bi dodatno povećao složenost bez jasne potrebe u prvom, jednostavnom završnom modelu.
+
+\paragraph{Logistički završni model.}
+Nad navedenim meta-značajkama trenira se logistička regresija. Njezin oblik može se zapisati kao
+
+\[
+p_{\mathrm{meta}}(t)=\sigma\left(
+\beta_0
++\sum_{i=1}^{3}\beta_i\ell_i
++\sum_{i<j}\beta_{ij}\ell_i\ell_j
++\sum_{i=1}^{3}\gamma_i\ell_i^2
+\right),
+\]
+
+gdje je
+
+\[
+\sigma(u)=\frac{1}{1+e^{-u}}.
+\]
+
+Ovaj izbor zadržava model dovoljno jednostavnim za tumačenje, ali mu ipak dopušta osnovne nelinearne odnose među trima baznim vjerojatnostima. U odnosu na malu neuronsku mrežu, ovdje je manji rizik prenaučenosti i lakše je provjeriti kako pojedini ulazi utječu na završnu odluku.
+
+\paragraph{Izlaz podsustava.}
+Završni izlaz meta-modela je jedna vrijednost
+
+\[
+p_{\mathrm{meta}}(t)\in[0,1],
+\]
+
+koja predstavlja konačnu procjenu vjerojatnosti da je komentar AI-generiran. Ako bi se iz te vjerojatnosti htjela dobiti binarna odluka, može se koristiti pravilo
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{meta}}(t)\ge 0.5\}.
+\]
+
+Ipak, kao i kod baznih podsustava, središnji izlaz je sama vjerojatnost, a ne pragom dobivena tvrda odluka.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Usporedba triju baznih modela i završnog meta-modela na razvojnom skupu prikazana je u sljedećoj tablici:
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{center}
+\begin{tabular}{lccccccc}
+\hline
+Model & Točnost & Prec. & Odziv & $F_1$ & AUC & Log-gub. & Brier \\
+\hline
+Semantički SVM & 0.90948 & 0.90341 & 0.91283 & 0.90810 & 0.96885 & 0.22646 & 0.06715 \\
+Stablasti model & 0.90487 & 0.89214 & 0.91664 & 0.90423 & 0.96696 & 0.23115 & 0.07009 \\
+TF-IDF logreg & 0.98085 & 0.98627 & 0.97447 & 0.98033 & 0.99780 & 0.06739 & 0.01626 \\
+\hline
+Meta-model & 0.98406 & 0.98788 & 0.97949 & 0.98366 & 0.99840 & 0.04564 & 0.01240 \\
+\hline
+\end{tabular}
+\end{center}
+}
+
+Završni meta-model postiže najbolji rezultat po svim navedenim metrikama. Najjači pojedinačni bazni model je TF-IDF logistička regresija, ali kombiniranje triju pogleda dodatno povećava preciznost, odziv, mjeru $F_1$ i kvalitetu vjerojatnosne procjene.
+
+Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 21322 & 249 \\
+y=1 & 425 & 20293
+\end{array}
+\]
+
+U odnosu na pojedinačne bazne modele, završni model poboljšava i klasifikacijske i vjerojatnosne metrike. To pokazuje da tri podsustava ne nose potpuno isti signal: meta-model iz njih može izvući dodatnu informaciju upravo kroz kombiniranje i interakcije.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najjednostavnije poboljšanje bilo bi dodati usporedbu s još jednostavnijim meta-modelom koji koristi samo tri logita bez interakcija. Time bi se jasno izmjerilo koliko stvarno doprinose parne interakcije i kvadratni članovi. Drugi prirodan korak je kalibracijska provjera završnog izlaza, primjerice kroz Brierovu mjeru i pouzdanosnu krivulju. Tek ako bi takav model pokazao sustavnu pogrešku u određenim područjima prostora triju vjerojatnosti, imalo bi smisla pokušati malu neuronsku mrežu.
+\end{document}
