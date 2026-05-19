@@ -1,8 +1,19 @@
 const MIN_CHARS = 120;
 const AI_THRESHOLD = 0.85;
-const POSSIBLE_THRESHOLD = 0.5;
+const POSSIBLE_THRESHOLD = 0;
 
 const seen = new WeakSet();
+let extensionContextValid = true;
+let scanning = false;
+
+function isExtensionContextError(error) {
+  return String(error?.message ?? error).includes("Extension context invalidated");
+}
+
+function stopScanning() {
+  extensionContextValid = false;
+  observer.disconnect();
+}
 
 function getCommentNodes() {
   return [
@@ -36,6 +47,8 @@ function hashText(text) {
 }
 
 async function getCachedOrClassify(text) {
+  if (!extensionContextValid) return null;
+
   const key = `ai_comment_${hashText(text)}`;
   const cached = await chrome.storage.local.get(key);
 
@@ -57,11 +70,6 @@ function addBadge(commentNode, result) {
   if (!result?.ok) return;
 
   const score = result.score;
-
-  console.log(result);
-
-  console.log(result.label);
-  console.log(score);
 
   if (result.label == "HUMAN") {
     return;
@@ -95,23 +103,36 @@ function addBadge(commentNode, result) {
 }
 
 async function scanComments() {
+  if (!extensionContextValid || scanning) return;
+
+  scanning = true;
   const comments = getCommentNodes();
 
-  for (const comment of comments) {
-    if (seen.has(comment)) continue;
-    seen.add(comment);
+  try {
+    for (const comment of comments) {
+      if (!extensionContextValid) break;
+      if (seen.has(comment)) continue;
+      seen.add(comment);
 
-    const text = extractText(comment);
-    if (!text) continue;
+      const text = extractText(comment);
+      if (!text) continue;
 
-    try {
-      const result = await getCachedOrClassify(text);
-      addBadge(comment, result);
-    } catch (err) {
-      console.warn("Could not classify comment:", err);
+      try {
+        const result = await getCachedOrClassify(text);
+        addBadge(comment, result);
+      } catch (err) {
+        if (isExtensionContextError(err)) {
+          stopScanning();
+          break;
+        }
+
+        console.warn("Could not classify comment:", err);
+      }
+
+      await sleep(250);
     }
-
-    await sleep(250);
+  } finally {
+    scanning = false;
   }
 }
 

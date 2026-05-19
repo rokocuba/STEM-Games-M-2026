@@ -1,4 +1,4 @@
-const MODEL_ENDPOINT = "http://localhost:8000/classify";
+const MODEL_ENDPOINT = "http://127.0.0.1:8000/classify";
 
 chrome.runtime.onMessage.addListener((message, sender, sendResponse) => {
   if (message.type !== "CLASSIFY_COMMENT") return;
