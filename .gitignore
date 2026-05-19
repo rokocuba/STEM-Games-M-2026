@@ -2,5 +2,18 @@
 __pycache__/
 *.py[cod]
 .prepare_datasets.py
+
 semantic_svm/artifacts/
 semantic_svm/model_cache/
+
+# LaTeX build artifacts
+*.aux
+*.fdb_latexmk
+*.fls
+*.log
+*.nav
+*.out
+*.snm
+*.synctex.gz
+*.toc
+*.vrb
