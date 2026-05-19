@@ -5,7 +5,8 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 
 
-MODEL_PATH = Path("tf-logreg/reddit_ai_detector.joblib")
+ROOT_DIR = Path(__file__).resolve().parent
+MODEL_PATH = ROOT_DIR / "tf-logreg" / "reddit_ai_detector.joblib"
 
 app = FastAPI(title="Reddit AI Text Detector")
 
@@ -50,7 +51,7 @@ def classify(req: ClassifyRequest):
     classes = model.named_steps["classifier"].classes_
 
     probabilities = {
-        label: float(prob)
+        str(label): float(prob)
         for label, prob in zip(classes, probabilities_array)
     }
 
