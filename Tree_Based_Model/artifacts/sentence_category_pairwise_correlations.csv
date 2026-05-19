@@ -1,0 +1,191 @@
+feature_a,feature_b,pearson_correlation,absolute_correlation
+Sentence length std dev,Consecutive sentence gap,0.907534175087,0.907534175087
+Sentences per paragraph,Words per paragraph,0.848966499581,0.848966499581
+Sentence length std dev,Any sentence >34 words,0.500372686385,0.500372686385
+Words per paragraph,Sentence length std dev,0.466463444959,0.466463444959
+Consecutive sentence gap,Any sentence >34 words,0.449483229420,0.449483229420
+Words per paragraph,Contains but,0.388671945983,0.388671945983
+Right parenthesis present,; or : present,0.358917784917,0.358917784917
+Sentences per paragraph,Sentence length std dev,0.358080397721,0.358080397721
+Sentence length std dev,Contains but,0.339234275896,0.339234275896
+Words per paragraph,Consecutive sentence gap,0.337794027656,0.337794027656
+Sentences per paragraph,Contains but,0.332304794940,0.332304794940
+Sentences per paragraph,Question mark present,0.317726251763,0.317726251763
+Words per paragraph,Any sentence >34 words,0.299343681699,0.299343681699
+; or : present,Contains numbers,0.278595931236,0.278595931236
+Words per paragraph,Hyphen present,0.271350098654,0.271350098654
+Apostrophe present,Contains but,0.267094220834,0.267094220834
+Words per paragraph,Apostrophe present,0.262818959687,0.262818959687
+Sentence length std dev,Any sentence <11 words,0.255596258615,0.255596258615
+Apostrophe present,Sentence length std dev,0.253050292431,0.253050292431
+Consecutive sentence gap,Contains but,0.252956750223,0.252956750223
+Hyphen present,Sentence length std dev,0.252555502282,0.252555502282
+Right parenthesis present,Contains numbers,0.251616670893,0.251616670893
+Sentences per paragraph,Apostrophe present,0.247122796905,0.247122796905
+Right parenthesis present,Any sentence >34 words,0.238913642105,0.238913642105
+Any sentence >34 words,Contains but,0.238233855418,0.238233855418
+Sentences per paragraph,Any sentence <11 words,0.237678207863,0.237678207863
+Sentences per paragraph,Consecutive sentence gap,0.228883142891,0.228883142891
+Words per paragraph,Question mark present,0.228553050972,0.228553050972
+Hyphen present,Contains but,0.223430140065,0.223430140065
+Sentences per paragraph,Hyphen present,0.218685322345,0.218685322345
+Right parenthesis present,Sentence length std dev,0.216886000999,0.216886000999
+Hyphen present,Any sentence >34 words,0.211258300935,0.211258300935
+Question mark present,Contains but,0.209484240479,0.209484240479
+Apostrophe present,Consecutive sentence gap,0.205740844802,0.205740844802
+Hyphen present,Apostrophe present,0.203027844004,0.203027844004
+Consecutive sentence gap,Any sentence <11 words,0.202831331035,0.202831331035
+Sentence length std dev,Contains this,0.200546540719,0.200546540719
+Sentence length std dev,Contains because,0.196122801501,0.196122801501
+Question mark present,Sentence length std dev,0.194873589573,0.194873589573
+Words per paragraph,Contains because,0.192378726368,0.192378726368
+Words per paragraph,Contains this,0.192154153216,0.192154153216
+Any sentence >34 words,Contains because,0.186620264883,0.186620264883
+Sentences per paragraph,Contains this,0.180593234040,0.180593234040
+Hyphen present,Consecutive sentence gap,0.179581287555,0.179581287555
+Question mark present,Apostrophe present,0.178428400009,0.178428400009
+Right parenthesis present,Consecutive sentence gap,0.165589061324,0.165589061324
+Apostrophe present,Any sentence >34 words,0.155969272790,0.155969272790
+Question mark present,Any sentence <11 words,0.155144793245,0.155144793245
+Any sentence >34 words,Contains numbers,0.152811446534,0.152811446534
+Sentence length std dev,Contains numbers,0.152466977943,0.152466977943
+Any sentence >34 words,Contains this,0.150474306538,0.150474306538
+; or : present,Any sentence >34 words,0.149355195884,0.149355195884
+Hyphen present,Contains numbers,0.148337392807,0.148337392807
+Contains but,Contains this,0.147958771686,0.147958771686
+Right parenthesis present,Hyphen present,0.147541281186,0.147541281186
+Contains but,Contains because,0.146805501584,0.146805501584
+Hyphen present,Question mark present,0.146486442419,0.146486442419
+Consecutive sentence gap,Contains because,0.143108718577,0.143108718577
+Consecutive sentence gap,Contains this,0.141722794995,0.141722794995
+; or : present,Sentence length std dev,0.141032616589,0.141032616589
+Hyphen present,; or : present,0.139556916280,0.139556916280
+Question mark present,Uppercase >= 2x periods,0.137787879454,0.137787879454
+Sentences per paragraph,Contains because,0.135409502670,0.135409502670
+Words per paragraph,Right parenthesis present,0.131830176497,0.131830176497
+Question mark present,Consecutive sentence gap,0.130292741281,0.130292741281
+Right parenthesis present,Contains this,0.129999466979,0.129999466979
+Sentences per paragraph,Uppercase >= 2x periods,-0.126837041481,0.126837041481
+Hyphen present,Contains this,0.126274096000,0.126274096000
+Words per paragraph,Contains However,0.115281918871,0.115281918871
+Consecutive sentence gap,Contains numbers,0.114889871620,0.114889871620
+Words per paragraph,Contains others/researchers,0.113669611519,0.113669611519
+; or : present,Contains this,0.113036586273,0.113036586273
+Hyphen present,Contains because,0.109404081373,0.109404081373
+Right parenthesis present,Contains However,0.109082725347,0.109082725347
+; or : present,Contains However,0.108632593213,0.108632593213
+Words per paragraph,Contains et,0.107078700330,0.107078700330
+Right parenthesis present,Contains because,0.106885276332,0.106885276332
+Apostrophe present,Contains because,0.105047733590,0.105047733590
+Apostrophe present,Contains this,0.104086340739,0.104086340739
+Right parenthesis present,Contains although,0.100781828597,0.100781828597
+Words per paragraph,Contains although,0.098955703274,0.098955703274
+Contains because,Contains this,0.096382518362,0.096382518362
+; or : present,Consecutive sentence gap,0.094170173859,0.094170173859
+Words per paragraph,Contains numbers,0.094065327476,0.094065327476
+Sentences per paragraph,Contains others/researchers,0.091099575746,0.091099575746
+Sentences per paragraph,Any sentence >34 words,0.090000468864,0.090000468864
+Contains this,Contains numbers,0.089486207775,0.089486207775
+Sentence length std dev,Contains others/researchers,0.087889383148,0.087889383148
+Any sentence <11 words,Any sentence >34 words,-0.086145091229,0.086145091229
+Any sentence >34 words,Contains However,0.085903215906,0.085903215906
+Contains but,Contains others/researchers,0.085890365977,0.085890365977
+Any sentence <11 words,Uppercase >= 2x periods,-0.082786893657,0.082786893657
+Contains However,Contains numbers,0.082320576675,0.082320576675
+Right parenthesis present,Contains but,0.081782213194,0.081782213194
+Sentences per paragraph,Contains et,0.080087864004,0.080087864004
+; or : present,Contains because,0.077320934979,0.077320934979
+Sentences per paragraph,Contains However,0.074300730662,0.074300730662
+Any sentence >34 words,Contains others/researchers,0.071307912820,0.071307912820
+Sentence length std dev,Contains However,0.070306994125,0.070306994125
+Question mark present,Contains this,0.069953592343,0.069953592343
+Contains because,Contains numbers,0.069671127540,0.069671127540
+Words per paragraph,Uppercase >= 2x periods,-0.069554237899,0.069554237899
+Words per paragraph,; or : present,0.068394744513,0.068394744513
+Hyphen present,Contains However,0.068135902114,0.068135902114
+Any sentence >34 words,Contains although,0.067796857849,0.067796857849
+Contains because,Contains others/researchers,0.065064439292,0.065064439292
+Hyphen present,Contains others/researchers,0.064623562214,0.064623562214
+Sentence length std dev,Contains although,0.064158772253,0.064158772253
+Apostrophe present,Uppercase >= 2x periods,-0.063625660626,0.063625660626
+Sentences per paragraph,Contains although,0.061588879187,0.061588879187
+Contains However,Contains this,0.060703165591,0.060703165591
+Contains but,Contains numbers,0.060446217350,0.060446217350
+Sentence length std dev,Uppercase >= 2x periods,-0.059562863854,0.059562863854
+; or : present,Contains although,0.059147126586,0.059147126586
+Any sentence <11 words,Contains this,0.058641812044,0.058641812044
+Contains However,Contains because,0.057278282699,0.057278282699
+Consecutive sentence gap,Contains others/researchers,0.057008926160,0.057008926160
+Contains because,Uppercase >= 2x periods,-0.055798326440,0.055798326440
+Sentences per paragraph,Right parenthesis present,0.053522111834,0.053522111834
+Sentences per paragraph,Contains numbers,0.051960572825,0.051960572825
+Contains although,Contains numbers,0.050708710098,0.050708710098
+Right parenthesis present,Contains others/researchers,0.048654866022,0.048654866022
+Contains although,Contains However,0.048443093993,0.048443093993
+Apostrophe present,Contains numbers,0.047192606930,0.047192606930
+Apostrophe present,Contains others/researchers,0.044306021857,0.044306021857
+Consecutive sentence gap,Contains although,0.043715917197,0.043715917197
+Consecutive sentence gap,Contains However,0.043108664906,0.043108664906
+Contains this,Contains others/researchers,0.042909276443,0.042909276443
+Question mark present,Contains because,0.042876041328,0.042876041328
+Contains others/researchers,Uppercase >= 2x periods,-0.041305386972,0.041305386972
+; or : present,Contains others/researchers,0.040986994915,0.040986994915
+Hyphen present,Contains although,0.040741052824,0.040741052824
+Contains However,Contains others/researchers,0.040359731337,0.040359731337
+Question mark present,Contains others/researchers,0.040100926157,0.040100926157
+Consecutive sentence gap,Uppercase >= 2x periods,-0.039858289614,0.039858289614
+Right parenthesis present,Apostrophe present,0.039704485698,0.039704485698
+Contains this,Uppercase >= 2x periods,-0.038961287710,0.038961287710
+Right parenthesis present,Contains et,0.038815016022,0.038815016022
+Contains although,Contains this,0.037968364265,0.037968364265
+; or : present,Any sentence <11 words,0.037605338802,0.037605338802
+Contains although,Contains because,0.037375108860,0.037375108860
+Contains but,Uppercase >= 2x periods,-0.037330612066,0.037330612066
+; or : present,Contains et,0.034430389472,0.034430389472
+Contains However,Contains but,0.034039916031,0.034039916031
+Any sentence >34 words,Uppercase >= 2x periods,0.030872657193,0.030872657193
+Contains although,Contains but,0.030479226691,0.030479226691
+Right parenthesis present,Uppercase >= 2x periods,0.029108507406,0.029108507406
+Apostrophe present,Contains However,0.028127270506,0.028127270506
+Sentence length std dev,Contains et,0.027004312218,0.027004312218
+Any sentence >34 words,Contains et,0.026461753768,0.026461753768
+Contains others/researchers,Contains et,0.025595405899,0.025595405899
+Contains numbers,Contains et,0.025171625907,0.025171625907
+Contains although,Contains et,0.025037939454,0.025037939454
+Contains although,Contains others/researchers,0.024746156209,0.024746156209
+Question mark present,Any sentence >34 words,0.023329896895,0.023329896895
+; or : present,Contains but,0.022747120789,0.022747120789
+Contains However,Contains et,0.021875181856,0.021875181856
+Apostrophe present,Contains although,0.021365529841,0.021365529841
+Right parenthesis present,Question mark present,-0.018053848814,0.018053848814
+Contains this,Contains et,0.017521487024,0.017521487024
+Consecutive sentence gap,Contains et,0.017499715067,0.017499715067
+Contains numbers,Uppercase >= 2x periods,0.017118443137,0.017118443137
+Hyphen present,Contains et,0.016916896712,0.016916896712
+Hyphen present,Uppercase >= 2x periods,-0.014229272874,0.014229272874
+Sentences per paragraph,; or : present,0.013183562028,0.013183562028
+Any sentence <11 words,Contains others/researchers,0.012433760084,0.012433760084
+Hyphen present,Any sentence <11 words,0.011585874364,0.011585874364
+; or : present,Question mark present,-0.011020022605,0.011020022605
+Contains others/researchers,Contains numbers,0.010808960949,0.010808960949
+Words per paragraph,Any sentence <11 words,0.010623604722,0.010623604722
+Question mark present,Contains numbers,-0.010129085593,0.010129085593
+Contains although,Uppercase >= 2x periods,0.009190998044,0.009190998044
+Right parenthesis present,Any sentence <11 words,0.009177029866,0.009177029866
+Contains because,Contains et,0.009000329678,0.009000329678
+; or : present,Uppercase >= 2x periods,0.008811275457,0.008811275457
+Any sentence <11 words,Contains numbers,0.007539753935,0.007539753935
+Contains but,Contains et,0.007362697445,0.007362697445
+Contains However,Uppercase >= 2x periods,0.006065925048,0.006065925048
+Uppercase >= 2x periods,Contains et,0.003860148891,0.003860148891
+Any sentence <11 words,Contains although,0.003606857952,0.003606857952
+Any sentence <11 words,Contains because,-0.003088533044,0.003088533044
+Any sentence <11 words,Contains However,-0.002218189616,0.002218189616
+Any sentence <11 words,Contains et,0.001612058842,0.001612058842
+Question mark present,Contains although,0.001375312499,0.001375312499
+Apostrophe present,Any sentence <11 words,-0.001348300548,0.001348300548
+Question mark present,Contains et,0.001149587500,0.001149587500
+Apostrophe present,Contains et,0.000481544551,0.000481544551
+; or : present,Apostrophe present,-0.000365798589,0.000365798589
+Any sentence <11 words,Contains but,0.000238581297,0.000238581297
+Question mark present,Contains However,0.000083042477,0.000083042477
