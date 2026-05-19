@@ -1,0 +1,133 @@
+\subsection{TF-IDF logistička regresija kao podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Ovaj podsustav služi kao brz, lokalno izvediv i lako objašnjiv tekstualni model. Za razliku od semantičkog SVM-a, koji komentar najprije prevodi u gusti vektorski prikaz značenja, ovdje se izravno koristi površinski tekst: riječi, kratke fraze i nizovi znakova. Takav pristup polazi od pretpostavke da AI-generirani komentari često ostavljaju tragove u izboru izraza, ponavljanju fraza, interpunkciji, prefiksima, sufiksima i općem ritmu pisanja.
+
+Model ne koristi metapodatke o korisniku, karmi, vremenu objave, povijesti računa ili subredditu. Ulaz je isključivo tekst komentara $t$, a izlaz je procjena vjerojatnosti
+
+\[
+p_{\mathrm{tf}}(t) \approx P(y=1\mid t),
+\]
+
+gdje $y=1$ označava razred \texttt{AI}, a $y=0$ razred \texttt{HUMAN}. Time je podsustav namjerno ograničen, ali je zato jednostavan za pokretanje, brz za inferenciju i prikladan kao jedan od ulaza šireg ansambla.
+
+\paragraph{Ulazni podaci i cjevovod.}
+Skripta \texttt{train.py} očekuje CSV datoteku sa stupcima \texttt{comment} i \texttt{label}. Retci kojima nedostaje komentar ili oznaka uklanjaju se prije treniranja, a oznake se tretiraju kao tekstualne vrijednosti. Skup se zatim dijeli na dio za učenje i dio za testiranje pomoću stratificirane podjele. Stratifikacija čuva približno isti omjer razreda u oba podskupa, što je važno jer bi obična slučajna podjela mogla dati nereprezentativan testni skup.
+
+U implementaciji je cijeli postupak spremljen kao jedan \texttt{scikit-learn} \texttt{Pipeline}. To znači da spremljena datoteka \texttt{reddit\_ai\_detector.joblib} ne sadrži samo završni klasifikator, nego i pretvorbu teksta u značajke. Novi komentar zato se može izravno proslijediti metodama \texttt{predict} i \texttt{predict\_proba}, bez ručnog računanja vektora.
+
+\paragraph{TF-IDF prikaz.}
+Komentar se najprije pretvara u rijedak numerički vektor pomoću TF-IDF težina. Za termin $u$ i dokument $d$ osnovna težina ima oblik
+
+\[
+x_{u,d}=\operatorname{tf}(u,d)\cdot \operatorname{idf}(u),
+\]
+
+gdje $\operatorname{tf}(u,d)$ opisuje koliko se termin često pojavljuje u komentaru, a $\operatorname{idf}(u)$ smanjuje težinu termina koji se pojavljuju u velikom broju komentara. U pojednostavljenom obliku može se pisati
+
+\[
+\operatorname{idf}(u)=\log\frac{N}{1+\operatorname{df}(u)},
+\]
+
+pri čemu je $N$ ukupan broj dokumenata, a $\operatorname{df}(u)$ broj dokumenata u kojima se termin pojavljuje. Intuicija je jednostavna: riječ ili obrazac koji se pojavljuje gotovo svugdje slabo razlikuje razrede, dok rjeđi obrazac može biti informativniji.
+
+U stvarnoj provedbi koristi se \texttt{sublinear\_tf=True}, pa se utjecaj vrlo čestih termina ublažava logaritamskom skalom. Ako je $c(u,d)$ broj pojavljivanja termina, tada se umjesto sirove frekvencije koristi oblik
+
+\[
+\operatorname{tf}_{\mathrm{sub}}(u,d)=1+\log c(u,d)
+\]
+
+za termine koji se u dokumentu pojavljuju. Time se sprječava da jedna višestruko ponovljena riječ previše dominira cijelim vektorom.
+
+\paragraph{Riječne i znakovne značajke.}
+Podsustav koristi dvije paralelne skupine TF-IDF značajki. Prva skupina su riječni $n$-grami s rasponom \texttt{ngram\_range=(1, 2)}. Oni hvataju pojedinačne riječi i kratke fraze, primjerice stabilne izraze, česte prijelaze ili tipične formulacije.
+
+Druga skupina su znakovni $n$-grami s rasponom \texttt{ngram\_range=(3, 5)}. Oni ne ovise o potpunim riječima, nego hvataju kraće nizove znakova: nastavke riječi, prefikse, interpunkcijske obrasce, dijelove kontrakcija i formatiranje. To je korisno jer se stil pisanja često vidi upravo u sitnim lokalnim obrascima koji ne moraju biti cijele riječi.
+
+Obje skupine koriste \texttt{min\_df=2} i \texttt{max\_df=0.95}. Prvi uvjet uklanja obrasce koji se pojavljuju samo jednom i vjerojatno su šum, a drugi uklanja obrasce koji su toliko česti da slabo razlikuju razrede. Dobiveni vektori spajaju se pomoću \texttt{FeatureUnion}, pa je konačni ulaz logističke regresije
+
+\[
+x = \begin{bmatrix}x_{\mathrm{word}} \\ x_{\mathrm{char}}\end{bmatrix}.
+\]
+
+\paragraph{Logistička regresija.}
+Nad spojenim TF-IDF vektorom uči se linearna odlučna funkcija
+
+\[
+s(x)=w^\top x+b.
+\]
+
+Vrijednost $s(x)$ zatim se pretvara u vjerojatnost sigmoidnom funkcijom
+
+\[
+P(y=1\mid x)=\sigma(s)=\frac{1}{1+e^{-s}}.
+\]
+
+Ako je ta vjerojatnost veća od vjerojatnosti suprotnog razreda, model vraća oznaku \texttt{AI}; inače vraća \texttt{HUMAN}. Važno je da je granica odluke linearna u prostoru TF-IDF značajki. To ne znači da je model primitivan: prostor značajki sadrži velik broj riječi, fraza i znakovnih obrazaca, pa linearna granica zapravo može kombinirati mnogo lokalnih tekstualnih signala.
+
+\paragraph{Optimizacijska zadaća.}
+Za skup primjera $(x_i,y_i)$ logistička regresija minimizira binarnu unakrsnu entropiju. Ako je
+
+\[
+p_i=\sigma(w^\top x_i+b),
+\]
+
+tada je osnovni gubitak
+
+\[
+\mathcal{L}(w,b)=-\sum_{i=1}^{n}\left[y_i\log p_i+(1-y_i)\log(1-p_i)\right].
+\]
+
+U \texttt{scikit-learn} izvedbi zadana je i $L_2$ regularizacija, pa se uči kompromis između prilagodbe podacima i veličine težina:
+
+\[
+\min_{w,b}\;\mathcal{L}(w,b)+\lambda\|w\|_2^2.
+\]
+
+Regularizacija je posebno važna jer TF-IDF prikaz može imati vrlo velik broj dimenzija. Bez nje bi model lako previše povjerovao rijetkim izrazima koji su slučajno povezani s jednim razredom u skupu za učenje.
+
+\paragraph{Uravnoteženje razreda.}
+U kodu se koristi \texttt{class\_weight="balanced"}. Time se pogreške na rjeđem razredu automatski jače kažnjavaju. Za razred $c$ težina je razmjerna izrazu
+
+\[
+\omega_c=\frac{n}{K\,n_c},
+\]
+
+gdje je $n$ ukupan broj primjera, $K$ broj razreda, a $n_c$ broj primjera razreda $c$. Time se smanjuje opasnost da model visoku točnost postigne samo favoriziranjem većinskog razreda.
+
+\paragraph{Zašto je ovaj model prikladan kao osnovni tekstualni signal.}
+Prednost TF-IDF logističke regresije jest u tome što je vrlo brza i stabilna. Treniranje i inferencija svode se na rad s rijetkim matricama i linearnim modelom, pa je postupak znatno jeftiniji od modela koji zahtijevaju duboke jezične reprezentacije. Uz to, težine modela imaju izravnu interpretaciju: pozitivna težina nekog obrasca gura odluku prema razredu \texttt{AI}, a negativna prema razredu \texttt{HUMAN}.
+
+S druge strane, model ne razumije tekst u dubokom semantičkom smislu. Ako se ista namjera izrazi potpuno drukčijim riječima, TF-IDF model to može teže povezati nego model temeljen na semantičkim ugradnjama. Zato je ovaj podsustav najkorisniji kao komplementaran signal: dobro hvata leksičke i stilističke tragove, dok drugi podsustavi pokrivaju značenje i strukturu.
+
+\paragraph{Izlaz podsustava.}
+Za komentar $t$ model vraća razredne vjerojatnosti dobivene metodom \texttt{predict\_proba}. Samostalna binarna odluka može se zapisati kao
+
+\[
+\hat y=\mathbf{1}\{p_{\mathrm{tf}}(t)\ge 0.5\}.
+\]
+
+U naredbenom retku \texttt{predict.py} ispisuje predviđenu oznaku i vjerojatnosti za oba razreda. U lokalnom API-ju iz datoteke \texttt{app.py} isti se spremljeni model koristi za endpoint \texttt{/classify}, koji vraća oznaku, pripadni rezultat i objašnjenje \texttt{TF-IDF + Logistic Regression model}.
+
+\paragraph{Rezultati na testnom skupu.}
+Spremljeni model \texttt{reddit\_ai\_detector.joblib} vrednovan je na skupu \texttt{data/test.csv}. Skup sadrži $42292$ komentara, od čega $20719$ s oznakom \texttt{AI} i $21573$ s oznakom \texttt{HUMAN}. Dobivena je točnost
+
+\[
+\mathrm{accuracy}=0.98047.
+\]
+
+Za razred \texttt{AI} preciznost iznosi približno $0.99$, odziv $0.97$ i mjera $F_1=0.98$. Za razred \texttt{HUMAN} preciznost iznosi približno $0.98$, odziv $0.99$ i mjera $F_1=0.98$. Konfuzijska matrica, u redoslijedu redaka \texttt{AI}, \texttt{HUMAN} i stupaca $\hat y=\mathrm{AI}$, $\hat y=\mathrm{HUMAN}$, iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=\mathrm{AI} & \hat y=\mathrm{HUMAN} \\
+\hline
+y=\mathrm{AI} & 20196 & 523 \\
+y=\mathrm{HUMAN} & 303 & 21270
+\end{array}
+\]
+
+Rezultat pokazuje da ovaj jednostavan linearni model vrlo snažno razdvaja razrede na danom skupu. Ipak, vjerojatnosti treba tumačiti kao sličnost naučenim obrascima, a ne kao dokaz stvarnog autorstva.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najizravnije poboljšanje ovoga podsustava jest sustavno podešavanje hiperparametara TF-IDF prikaza i logističke regresije. Primjerice, moglo bi se ispitati šire raspone riječnih i znakovnih $n$-grama, drukčije vrijednosti \texttt{min\_df} i \texttt{max\_df}, jačinu regularizacije te kalibraciju vjerojatnosti na odvojenom razvojnom skupu. Takve promjene ne mijenjaju osnovnu arhitekturu, ali mogu poboljšati robusnost modela na nove stilove AI-generiranog teksta.
