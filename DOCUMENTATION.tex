@@ -1,10 +1,12 @@
 \documentclass{article}
 \usepackage[utf8]{inputenc}
-\usepackage[hrvatski]{babel}
+\usepackage[croatian]{babel}
 \usepackage{pgfplots}
 \usepackage{hyperref}
 \usepackage{booktabs}
 \usepackage{graphicx}
+\usepackage{amsmath}
+\usepackage{amssymb}
 \pgfplotsset{compat=1.18}
 % 1. Proširivanje margina (postavlja sve na 3 cm, podesi po želji)
 \usepackage[margin=3cm]{geometry}
@@ -21,6 +23,26 @@ Društvene mreže danas obuhvaćaju više od 5,4 milijarde korisnika globalno. U
 Dok \textit{good} botovi obavljaju korisne funkcije (agregacija vijesti, moderatori sadržaja, chatbotovi za podršku), \textit{bad} botovi predstavljaju ozbiljnu kibernetičku i društvenu prijetnju. Oni narušavaju povjerenje u online komunikaciju, manipuliraju javnim mnijenjem i šire dezinformacije. Razvoj alata za detekciju botova je zato ključan jer društvene mreže nagrađuju veliki angažman i gledanost bez obzira na autentičnost. Osim jednostavnih \textit{spam} botova, problem postaju sofisticirani društveni botovi koji oponašaju stvarne osobe.
 
 Osim detekcije botova na temelju broja objava, omjera pratitelja i vjerodostojnosti profila, naš projekt promatra sam tekst komentara i način na koji je komentar napisan. Ne pokušavamo dokazati tko stoji iza profila, nego procjenjujemo vjerojatnost da je pojedini komentar AI-generiran. Zbog veće preciznosti sustav spaja tri komplementarna pogleda u \textbf{ansambl modela} (\textit{ensemble learning}): semantički pogled na značenje komentara, strukturni pogled na građu rečenica i interpunkciju te leksički pogled na riječi, tokene i kratke znakovne obrasce. Izlazi tih podsustava zatim se kombiniraju završnim \textit{stacking} meta-modelom, koji daje konačnu procjenu AI autorstva.
+
+\section{Podaci i priprema skupa}
+
+Za treniranje i vrednovanje modela korišteni su javno dostupni skupovi podataka s Reddit komentarima i AI-generiranim tekstom. Podaci su objedinjeni iz triju izvora:
+
+\begin{itemize}
+    \item \texttt{gpt-slop-2}: \url{https://huggingface.co/datasets/trentmkelly/gpt-slop-2/},
+    \item GriD Reddit skupovi: \url{https://github.com/madlab-ucr/GriD/tree/main/reddit_datasets},
+    \item \texttt{gpt-slop}: \url{https://huggingface.co/datasets/trentmkelly/gpt-slop}.
+\end{itemize}
+
+Nakon objedinjavanja podaci su nasumično promiješani kako bi se smanjio utjecaj redoslijeda izvora, vremenskog grupiranja i mogućih lokalnih obrazaca unutar pojedinog skupa. Zatim je napravljen standardni omjer podjele $70$--$15$--$15$:
+
+\[
+70\% \rightarrow \texttt{train.csv}, \qquad
+15\% \rightarrow \texttt{dev.csv}, \qquad
+15\% \rightarrow \texttt{test.csv}.
+\]
+
+Skup \texttt{train.csv} koristi se za učenje baznih modela i završnog meta-modela, \texttt{dev.csv} za razvojno vrednovanje i usporedbu modela, a \texttt{test.csv} za završnu provjeru generalizacije na odvojenim primjerima.
 
 
 \section*{Matematička analiza: Aproksimirani uspon botova}

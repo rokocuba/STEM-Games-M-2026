@@ -6,6 +6,8 @@
 \usepackage{pgfplots}
 \usepackage{hyperref}
 \usepackage{tikz}
+\usepackage{graphicx}
+\usetikzlibrary{positioning}
 \pgfplotsset{compat=1.18}
 
 \usetheme{Madrid}
@@ -144,272 +146,409 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
     \end{itemize}
 \end{frame}
 
+\section{Detekcijski Sustav}
+
 \begin{frame}{Naš detekcijski sustav}
-    \begin{itemize}
-        \item Sustav kombinira više tekstualnih signala jer jedan indikator nije dovoljno pouzdan.
-        \item Perplexity komponenta mjeri koliko je komentar predvidljiv malom jezičnom modelu.
-        \item Sentiment komponenta mjeri emocionalni ton i konzistentnost izražavanja.
-        \item TF-IDF + logistička regresija u \texttt{tf-logreg/train.py} uči direktno iz riječi, fraza i znakova.
-        \item Dodatno ćemo trenirati SVM i druge klasifikatore nad istim ili proširenim značajkama.
-        \item Završna neuronska mreža spaja izlaze svih komponenti u jednu odluku HUMAN/AI.
-    \end{itemize}
+    \centering
+    \begin{tikzpicture}[every node/.style={font=\small, align=center}]
+        \node[draw, rounded corners, fill=blue!10, minimum width=2.8cm, minimum height=8mm] (text) at (0,0) {Reddit komentar $t$};
+        \node[draw, rounded corners, fill=green!10, minimum width=3.2cm] (sem) at (-4.2,-1.7) {Semantički SVM\\$p_{\mathrm{sem}}(t)$};
+        \node[draw, rounded corners, fill=orange!15, minimum width=3.2cm] (tree) at (0,-1.7) {Stablasti model\\$p_{\mathrm{tree}}(t)$};
+        \node[draw, rounded corners, fill=purple!10, minimum width=3.2cm] (tf) at (4.2,-1.7) {TF-IDF logreg\\$p_{\mathrm{tf}}(t)$};
+        \node[draw, rounded corners, fill=red!10, minimum width=5.7cm, minimum height=9mm] (meta) at (0,-3.5) {Stacking meta-model};
+        \node[draw, rounded corners, fill=gray!12, minimum width=4.2cm] (out) at (0,-4.8) {$p_{\mathrm{meta}}(t)$ i odluka AI/HUMAN};
+        \draw[->, thick] (text) -- (sem);
+        \draw[->, thick] (text) -- (tree);
+        \draw[->, thick] (text) -- (tf);
+        \draw[->, thick] (sem) -- (meta);
+        \draw[->, thick] (tree) -- (meta);
+        \draw[->, thick] (tf) -- (meta);
+        \draw[->, thick] (meta) -- (out);
+    \end{tikzpicture}
+
+    \vspace{2mm}
+    {\small Tri komplementarna pogleda: značenje, struktura i lokalni tekstualni obrasci.}
 \end{frame}
 
 \begin{frame}{Formalizacija zadatka}
-    \begin{itemize}
-        \item Svaki komentar pretvaramo u par \((x_i, y_i)\), gdje je \(x_i\) tekst, a \(y_i \in \{0,1\}\).
-        \item Koristimo oznaku \(y_i=1\) za AI komentar i \(y_i=0\) za ljudski komentar.
-        \item Model uči funkciju:
-    \end{itemize}
+    \begin{columns}[T]
+        \begin{column}{0.50\textwidth}
+            \[
+                y=1 \Leftrightarrow \texttt{AI}, \qquad y=0 \Leftrightarrow \texttt{HUMAN}
+            \]
 
-    \[
-        f: \mathcal{X} \rightarrow [0,1], \qquad f(x_i) \approx P(y_i=1 \mid x_i)
-    \]
+            \[
+                p(t) \approx P(y=1\mid t)
+            \]
 
-    \begin{itemize}
-        \item Konačna odluka dobiva se pragom, najčešće \(0.5\):
-    \end{itemize}
-
-    \[
-        \hat{y}_i =
-        \begin{cases}
-            1, & f(x_i) \ge 0.5 \\
-            0, & f(x_i) < 0.5
-        \end{cases}
-    \]
+            \[
+                \hat y=\mathbf{1}\{p(t)\ge 0.5\}
+            \]
+        \end{column}
+        \begin{column}{0.46\textwidth}
+            \begin{tabular}{@{}ll@{}}
+                \toprule
+                \textbf{Podsustav} & \textbf{Signal} \\ \midrule
+                SVM & semantički embedding \\
+                Stabla & 20 strukturnih značajki \\
+                TF-IDF & 1.56M rijetkih $n$-grama \\
+                Meta-model & kombinacija vjerojatnosti \\ \bottomrule
+            \end{tabular}
+        \end{column}
+    \end{columns}
 \end{frame}
 
-\begin{frame}{Što radi \texttt{tf-logreg/train.py}?}
-    \begin{enumerate}
-        \item Učitava CSV s obaveznim stupcima \texttt{comment} i \texttt{label}.
-        \item Briše retke bez komentara ili oznake.
-        \item Dijeli podatke na trening i test skup uz \texttt{stratify=y}, da omjer klasa ostane sličan.
-        \item Gradi \texttt{sklearn} pipeline: ekstrakcija značajki, zatim logistička regresija.
-        \item Ispisuje accuracy, classification report i confusion matrix.
-        \item Sprema naučeni model u \texttt{tf-logreg/reddit\_ai\_detector.joblib}.
-    \end{enumerate}
+\section{Semantički SVM}
+
+\begin{frame}{Model 1: Semantički SVM}
+    \begin{columns}[T]
+        \begin{column}{0.49\textwidth}
+            \textbf{Prikaz komentara}
+            \[
+                \hat{x}=\frac{x}{\|x\|_2}, \qquad
+                z_j=\frac{\hat{x}_j-\mu_j}{\sigma_j}
+            \]
+
+            \textbf{Linearna odluka}
+            \[
+                f(z)=w^\top z+b
+            \]
+
+            \[
+                p_{\mathrm{sem}}(t)\approx P(y=1\mid t)
+            \]
+        \end{column}
+        \begin{column}{0.47\textwidth}
+            \small
+            \begin{itemize}
+                \item Embedding model mapira tekst u prostor značenja.
+                \item \texttt{LinearSVC} razdvaja standardizirane embeddinge.
+                \item Vjerojatnost se dobiva Plattovom kalibracijom.
+            \end{itemize}
+
+            \[
+                P(y=1\mid s)\approx \frac{1}{1+\exp(As+B)}
+            \]
+        \end{column}
+    \end{columns}
 \end{frame}
 
-\begin{frame}{Značajke: riječi i znakovi}
+\begin{frame}{Semantički SVM: margina i rezultati}
+    \begin{columns}[T]
+        \begin{column}{0.45\textwidth}
+            \[
+                \min_{w,b}\;\frac{1}{2}\|w\|_2^2 + C\sum_{i=1}^{n}\max\{0,1-\tilde y_i(w^\top z_i+b)\}
+            \]
+
+            \[
+                \text{širina margine}=\frac{2}{\|w\|_2}
+            \]
+        \end{column}
+        \begin{column}{0.51\textwidth}
+            \centering
+            \small
+            \begin{tabular}{@{}lc@{}}
+                \toprule
+                \textbf{Metrika} & \textbf{Dev} \\ \midrule
+                Točnost & 0.90948 \\
+                Preciznost & 0.90341 \\
+                Odziv & 0.91283 \\
+                $F_1$ & 0.90810 \\
+                ROC AUC & 0.96885 \\ \bottomrule
+            \end{tabular}
+
+            \vspace{2mm}
+            \begin{tabular}{@{}lcc@{}}
+                \toprule
+                & $\hat y=0$ & $\hat y=1$ \\ \midrule
+                $y=0$ & 19549 & 2022 \\
+                $y=1$ & 1806 & 18912 \\ \bottomrule
+            \end{tabular}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Stablasti Model}
+
+\begin{frame}{Model 2: Stablasti model}
     \begin{columns}[T]
         \begin{column}{0.48\textwidth}
-            \textbf{Word TF-IDF}
-            \begin{itemize}
-                \item Koristi riječi i parove riječi: \texttt{ngram\_range=(1,2)}.
-                \item Hvata fraze, tipične formulacije i tematske obrasce.
-                \item \texttt{min\_df=2} izbacuje izraze koji se pojave samo jednom.
-            \end{itemize}
+            \textbf{Ulaz}
+            \[
+                x\in\mathbb{R}^{20}
+            \]
+
+            \small
+            Značajke: broj riječi i rečenica po odlomku, upitnici, apostrofi, zagrade, crtice, duljine rečenica, prijelazne riječi i brojčane reference.
         \end{column}
         \begin{column}{0.48\textwidth}
-            \textbf{Character TF-IDF}
+            \textbf{Ansambl stabala}
+            \[
+                F_M(x)=\beta_0+\eta\sum_{m=1}^{M}T_m(x)
+            \]
+
+            \[
+                p_{\mathrm{tree}}(x)=\frac{1}{1+e^{-F_M(x)}}
+            \]
+
+            \small \texttt{HistGradientBoostingClassifier}: dubina 5, stopa učenja 0.06, 300 iteracija.
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Stablasti model: najvažnije značajke}
+    \centering
+    \includegraphics[width=0.82\textwidth,height=0.67\textheight,keepaspectratio]{../Tree_Based_Model/artifacts/tree_based_feature_importances.png}
+
+    \vspace{1mm}
+    {\small Najveći doprinos: broj riječi po odlomku, broj rečenica po odlomku, apostrofi, upitnici i varijabilnost duljine rečenica.}
+\end{frame}
+
+\begin{frame}{Stablasti model: rezultati}
+    \centering
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{tabular}{@{}lc@{}}
+                \toprule
+                \textbf{Metrika} & \textbf{Dev} \\ \midrule
+                Točnost & 0.90487 \\
+                Uravnotežena točnost & 0.9051 \\
+                Preciznost & 0.89214 \\
+                Odziv & 0.91664 \\
+                $F_1$ & 0.90423 \\
+                ROC AUC & 0.96696 \\ \bottomrule
+            \end{tabular}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{tabular}{@{}lcc@{}}
+                \toprule
+                & $\hat y=0$ & $\hat y=1$ \\ \midrule
+                $y=0$ & 19275 & 2296 \\
+                $y=1$ & 1727 & 18991 \\ \bottomrule
+            \end{tabular}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{TF-IDF Logistička Regresija}
+
+\begin{frame}{Model 3: TF-IDF logistička regresija}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \textbf{TF-IDF}
+            \[
+                \operatorname{tf}(t,g)=1+\log c_{t,g}
+            \]
+
+            \[
+                \operatorname{idf}(g)=\log\frac{1+N}{1+\operatorname{df}(g)}+1
+            \]
+
+            \[
+                \tilde x_g(t)=\operatorname{tf}(t,g)\operatorname{idf}(g)
+            \]
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \textbf{Dvije vrste $n$-grama}
+            \begin{tabular}{@{}ll@{}}
+                \toprule
+                Riječi & 1--2 grama \\
+                Znakovi & 3--5 grama \\
+                \bottomrule
+            \end{tabular}
+
+            \vspace{3mm}
+            \[
+                x(t)=\begin{bmatrix}x_{\mathrm{word}}(t)\\x_{\mathrm{char}}(t)\end{bmatrix}\in\mathbb{R}^{1557681}
+            \]
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{TF-IDF logistička regresija: odluka i gubitak}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \[
+                s_c(x)=w_c^\top x+b_c
+            \]
+
+            \[
+                p_{\mathrm{tf}}(t)=\frac{\exp(s_{\texttt{AI}}(x(t)))}{\exp(s_{\texttt{AI}}(x(t)))+\exp(s_{\texttt{HUMAN}}(x(t)))}
+            \]
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \[
+                \min_w\sum_{i=1}^{n}\alpha_{y_i}\left[-y_i\log p_i-(1-y_i)\log(1-p_i)\right]+\lambda\|w\|_2^2
+            \]
+
+            \small Koristi se \texttt{class\_weight=balanced}; rjeđi razred dobiva veću težinu u gubitku.
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{TF-IDF logistička regresija: rezultati}
+    \centering
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \begin{tabular}{@{}lc@{}}
+                \toprule
+                \textbf{Metrika} & \textbf{Dev} \\ \midrule
+                Točnost & 0.98085 \\
+                Preciznost & 0.98627 \\
+                Odziv & 0.97447 \\
+                $F_1$ & 0.98033 \\
+                ROC AUC & 0.99780 \\
+                Log-gubitak & 0.06739 \\
+                Brier & 0.01626 \\ \bottomrule
+            \end{tabular}
+        \end{column}
+        \begin{column}{0.45\textwidth}
+            \begin{tabular}{@{}lcc@{}}
+                \toprule
+                & $\hat y=0$ & $\hat y=1$ \\ \midrule
+                $y=0$ & 21290 & 281 \\
+                $y=1$ & 529 & 20189 \\ \bottomrule
+            \end{tabular}
+
+            \vspace{3mm}
+            \small Najjači pojedinačni bazni model.
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\section{Stacking Meta-Model}
+
+\begin{frame}{Stacking: kako spajamo tri modela}
+    \begin{columns}[T]
+        \begin{column}{0.48\textwidth}
+            \[
+                p_{\mathrm{sem}}(t),\qquad p_{\mathrm{tree}}(t),\qquad p_{\mathrm{tf}}(t)
+            \]
+
+            \[
+                p_{\mathrm{meta}}(t)\approx P(y=1\mid p_{\mathrm{sem}},p_{\mathrm{tree}},p_{\mathrm{tf}})
+            \]
+        \end{column}
+        \begin{column}{0.48\textwidth}
+            \small
             \begin{itemize}
-                \item Koristi nizove znakova duljine 3 do 5.
-                \item Hvata interpunkciju, prefikse, sufikse i stil pisanja.
-                \item Korisno je za kratke komentare i neobične obrasce teksta.
+                \item Train ulazi za meta-model dobiveni su out-of-fold postupkom.
+                \item Finalni bazni modeli treniraju se na cijelom train skupu.
+                \item Meta-model je logistička regresija nad logitima i interakcijama.
             \end{itemize}
         \end{column}
     \end{columns}
-
-    \vspace{3mm}
-    Obje skupine značajki spajaju se pomoću \texttt{FeatureUnion}.
 \end{frame}
 
-\begin{frame}{Matematika TF-IDF reprezentacije}
-    \begin{block}{Term frequency}
-        \[
-            \operatorname{tf}(t,d) = \frac{\text{broj pojavljivanja termina } t \text{ u dokumentu } d}{\text{ukupan broj termina u } d}
-        \]
-    \end{block}
-
-    \begin{block}{Inverse document frequency}
-        \[
-            \operatorname{idf}(t) = \log \frac{N}{1 + \operatorname{df}(t)}
-        \]
-    \end{block}
-
-    \begin{block}{TF-IDF težina}
-        \[
-            x_{t,d} = \operatorname{tf}(t,d) \cdot \operatorname{idf}(t)
-        \]
-    \end{block}
-
-    \small Rijetki, ali informativni izrazi dobivaju veću težinu; česti i neinformativni izrazi dobivaju manju težinu.
-\end{frame}
-
-\begin{frame}{Kakav je to model?}
-    \begin{itemize}
-        \item Model je \textbf{linearna logistička regresija} nad visoko-dimenzionalnim TF-IDF vektorima.
-        \item Ne razumije značenje teksta kao veliki jezični model, nego uči statističke obrasce koji razlikuju klase.
-        \item Za svaku značajku nauči težinu: pozitivna težina gura odluku prema jednoj klasi, negativna prema drugoj.
-        \item Koristi \texttt{class\_weight="balanced"}, pa ne favorizira veću klasu ako su podaci neuravnoteženi.
-        \item Prednost: brz, objašnjiv, radi lokalno na laptopu i može se lako ugraditi u API ili ekstenziju.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Matematička ideja logističke regresije}
-    \begin{block}{Linearna odluka}
-        \[
-            z = w_1 x_1 + w_2 x_2 + \cdots + w_n x_n + b
-        \]
-    \end{block}
-
-    \begin{block}{Pretvaranje u vjerojatnost}
-        \[
-            P(\text{AI} \mid x) = \sigma(z) = \frac{1}{1 + e^{-z}}
-        \]
-    \end{block}
-
-    \begin{itemize}
-        \item Ulaz \(x\) je TF-IDF vektor komentara.
-        \item Ako je vjerojatnost veća za \texttt{AI}, model vraća \texttt{AI}; inače vraća \texttt{HUMAN}.
-        \item \texttt{predict\_proba} daje numeričku sigurnost odluke.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Funkcija gubitka za logističku regresiju}
-    \begin{itemize}
-        \item Model se trenira tako da minimizira pogrešku između stvarne oznake \(y_i\) i predikcije \(p_i\).
-        \item Za binarnu klasifikaciju koristi se log-loss, odnosno binarna unakrsna entropija.
-    \end{itemize}
-
+\begin{frame}{Meta-značajke}
     \[
-        p_i = P(y_i=1 \mid x_i) = \sigma(w^T x_i + b)
+        \ell_i=\log\frac{p_i}{1-p_i}, \qquad p_i\in[10^{-5},1-10^{-5}]
     \]
 
     \[
-        \mathcal{L}(w,b) = -\frac{1}{m}\sum_{i=1}^{m}
-        \left[y_i\log(p_i) + (1-y_i)\log(1-p_i)\right]
+        \ell_1=\operatorname{logit}(p_{\mathrm{sem}}),\quad
+        \ell_2=\operatorname{logit}(p_{\mathrm{tree}}),\quad
+        \ell_3=\operatorname{logit}(p_{\mathrm{tf}})
     \]
-
-    \begin{itemize}
-        \item Ako je model sigurno kriv, gubitak je velik.
-        \item Ako je model sigurno točan, gubitak je blizu nule.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Zašto dodati SVM?}
-    \begin{itemize}
-        \item SVM je jak baseline za tekst jer TF-IDF daje velike, rijetke i gotovo linearno odvojive vektore.
-        \item Umjesto direktnog modeliranja vjerojatnosti, SVM traži granicu s najvećom marginom između klasa.
-        \item Linearni SVM često dobro radi kada ima puno značajki i relativno malo šuma po značajci.
-    \end{itemize}
-
-    \begin{block}{Optimizacijski cilj linearnog SVM-a}
-        \[
-            \min_{w,b} \frac{1}{2}\lVert w \rVert^2 + C\sum_{i=1}^{m}\max(0, 1-y_i(w^T x_i+b))
-        \]
-    \end{block}
-
-    \small Ovdje je \(y_i \in \{-1,1\}\), a parametar \(C\) određuje kompromis između široke margine i grešaka na trening skupu.
-\end{frame}
-
-\begin{frame}{Više algoritama, različite greške}
-    \begin{itemize}
-        \item Logistička regresija daje dobro kalibrirane vjerojatnosti i objašnjive težine značajki.
-        \item SVM može bolje iskoristiti marginu između klasa u TF-IDF prostoru.
-        \item Stabla i boosting modeli mogu koristiti ručno izrađene stilometrijske značajke: duljina rečenica, interpunkcija, ponavljanja, omjer velikih slova.
-        \item Perplexity model hvata predvidljivost teksta, što TF-IDF ne mjeri direktno.
-        \item Sentiment model hvata emocionalni ton, intenzitet i stabilnost izražavanja.
-    \end{itemize}
 
     \[
-        \text{jači sustav} = \text{različiti signali} + \text{različite pogreške} + \text{model za spajanje}
+        \phi(t)=\left[\ell_1,\ell_2,\ell_3,\ell_1\ell_2,\ell_1\ell_3,\ell_2\ell_3,\ell_1^2,\ell_2^2,\ell_3^2\right]
     \]
 \end{frame}
 
-\begin{frame}{Spajanje modela neuronskom mrežom}
-    \begin{itemize}
-        \item Svaki osnovni model vraća score ili vektor značajki.
-        \item Te izlaze spajamo u jedan meta-vektor:
-    \end{itemize}
-
+\begin{frame}{Završna funkcija odluke}
     \[
-        h = [p_{\text{logreg}},\; s_{\text{svm}},\; p_{\text{perplexity}},\; s_{\text{sentiment}},\; z_{\text{style}}]
+        p_{\mathrm{meta}}(t)=\sigma\left(\beta_0+\sum_{i=1}^{3}\beta_i\ell_i+\sum_{i<j}\beta_{ij}\ell_i\ell_j+\sum_{i=1}^{3}\gamma_i\ell_i^2\right)
     \]
 
-    \begin{itemize}
-        \item Neuronska mreža zatim uči nelinearnu funkciju spajanja:
-    \end{itemize}
-
     \[
-        a^{(1)} = \operatorname{ReLU}(W_1h + b_1), \qquad
-        \hat{p} = \sigma(W_2a^{(1)} + b_2)
+        \sigma(u)=\frac{1}{1+e^{-u}}, \qquad
+        \hat y=\mathbf{1}\{p_{\mathrm{meta}}(t)\ge 0.5\}
     \]
 
-    \begin{itemize}
-        \item Time mreža može naučiti da neki modeli imaju veću težinu u određenim situacijama.
-    \end{itemize}
-\end{frame}
-
-\begin{frame}{Treći dio: neuronska mreža}
+    \vspace{2mm}
     \centering
-    \vfill
-    {\Large \textbf{TODO}}
-
-    \vspace{6mm}
-    {\large Ovdje dodati detalje trećeg dijela neuronske mreže.}
-    \vfill
+    {\small Interakcije dopuštaju modelu da razlikuje slaganje i proturječje baznih podsustava.}
 \end{frame}
 
-\begin{frame}{Prediktivna moć na test skupu}
-    \centering
-    \begin{tabular}{@{}lccc@{}}
-        \toprule
-        \textbf{Klasa} & \textbf{Precision} & \textbf{Recall} & \textbf{F1} \\ \midrule
-        AI & 0.99 & 0.97 & 0.98 \\
-        HUMAN & 0.98 & 0.99 & 0.98 \\
-        \textbf{Ukupno} & \multicolumn{3}{c}{\textbf{Accuracy = 0.9805}} \\ \bottomrule
-    \end{tabular}
+\section{Rezultati}
 
-    \vspace{4mm}
-    \begin{tabular}{@{}lcc@{}}
+\begin{frame}{Usporedba modela na razvojnom skupu}
+    \centering
+    \scriptsize
+    \setlength{\tabcolsep}{3.4pt}
+    \begin{tabular}{@{}lccccccc@{}}
         \toprule
-        & \textbf{Pred. AI} & \textbf{Pred. HUMAN} \\ \midrule
-        \textbf{Stvarno AI} & 20196 & 523 \\
-        \textbf{Stvarno HUMAN} & 303 & 21270 \\ \bottomrule
+        \textbf{Model} & \textbf{Točnost} & \textbf{Prec.} & \textbf{Odziv} & \textbf{$F_1$} & \textbf{AUC} & \textbf{Log-gub.} & \textbf{Brier} \\ \midrule
+        Semantički SVM & 0.90948 & 0.90341 & 0.91283 & 0.90810 & 0.96885 & 0.22646 & 0.06715 \\
+        Stablasti model & 0.90487 & 0.89214 & 0.91664 & 0.90423 & 0.96696 & 0.23115 & 0.07009 \\
+        TF-IDF logreg & 0.98085 & 0.98627 & 0.97447 & 0.98033 & 0.99780 & 0.06739 & 0.01626 \\
+        \midrule
+        \textbf{Meta-model} & \textbf{0.98406} & \textbf{0.98788} & \textbf{0.97949} & \textbf{0.98366} & \textbf{0.99840} & \textbf{0.04564} & \textbf{0.01240} \\ \bottomrule
     \end{tabular}
 
     \vspace{3mm}
-    {\small Evaluacija: \texttt{uv run python tf-logreg/test\_data.py --data data/test.csv}}
+    \small Meta-model je najbolji po svim navedenim metrikama.
 \end{frame}
 
-\begin{frame}{Sigurnost predikcije}
-    \begin{itemize}
-        \item \texttt{predict.py} i lokalni API koriste \texttt{model.predict\_proba}.
-        \item Izlaz nije samo oznaka, nego i raspodjela vjerojatnosti po klasama.
-        \item Primjer izlaza API-ja: \texttt{label}, \texttt{score}, \texttt{probabilities}, \texttt{reason}.
-        \item \texttt{score} je vjerojatnost klase koju je model odabrao.
-        \item Visok score znači da je komentar sličan obrascima iz trening podataka; ne znači matematičku sigurnost da je autor zaista bot.
-    \end{itemize}
+\begin{frame}{Konfuzijske matrice na razvojnom skupu}
+    \centering
+    \scriptsize
+    \begin{tabular}{@{}lrrrr@{}}
+        \toprule
+        \textbf{Model} & \textbf{TN} & \textbf{FP} & \textbf{FN} & \textbf{TP} \\ \midrule
+        Semantički SVM & 19549 & 2022 & 1806 & 18912 \\
+        Stablasti model & 19275 & 2296 & 1727 & 18991 \\
+        TF-IDF logreg & 21290 & 281 & 529 & 20189 \\
+        \textbf{Meta-model} & \textbf{21322} & \textbf{249} & \textbf{425} & \textbf{20293} \\ \bottomrule
+    \end{tabular}
+
+    \vspace{5mm}
+    \begin{columns}[T]
+        \begin{column}{0.47\textwidth}
+            \centering
+            \textbf{Meta-model}
+            \[
+            \begin{array}{c|cc}
+             & \hat y=0 & \hat y=1 \\
+            \hline
+            y=0 & 21322 & 249 \\
+            y=1 & 425 & 20293
+            \end{array}
+            \]
+        \end{column}
+        \begin{column}{0.47\textwidth}
+            \small
+            Meta-model smanjuje i lažno pozitivne i lažno negativne primjere u odnosu na najjači pojedinačni model.
+        \end{column}
+    \end{columns}
 \end{frame}
 
-\begin{frame}{Ograničenja i rizici}
-    \begin{itemize}
-        \item Model ovisi o kvaliteti i reprezentativnosti označenog skupa podataka.
-        \item Ako se stil AI komentara promijeni, stare TF-IDF značajke mogu izgubiti snagu.
-        \item Ljudski komentari napisani formalno mogu izgledati kao AI, a AI komentari s namjernim greškama mogu izgledati ljudski.
-        \item Vjerojatnosti logističke regresije treba tretirati kao korisnu mjeru pouzdanosti, ali ne kao konačan dokaz.
-        \item Zato je najbolje kombinirati ovaj model s perplexity, sentiment i stilometrijskim značajkama.
-    \end{itemize}
-\end{frame}
+\begin{frame}{Test rezultat završnog modela}
+    \centering
+    \begin{tabular}{@{}ccccccc@{}}
+        \toprule
+        \textbf{Točnost} & \textbf{Prec.} & \textbf{Odziv} & \textbf{$F_1$} & \textbf{AUC} & \textbf{Log-gub.} & \textbf{Brier} \\ \midrule
+        0.98406 & 0.98722 & 0.98016 & 0.98368 & 0.99842 & 0.04499 & 0.01226 \\ \bottomrule
+    \end{tabular}
 
-\begin{frame}{Daljnji razvoj}
-    \begin{itemize}
-        \item Trenutni model već radi lokalno i može se koristiti kroz FastAPI endpoint \texttt{/classify}.
-        \item Chrome ekstenzija može slati Reddit komentare lokalnom API-ju i prikazivati oznaku korisniku.
-        \item Sljedeći korak je meta-model koji prima: TF-IDF score, perplexity score, sentiment značajke i stilometrijske mjere.
-        \item Za meta-model su praktični Random Forest, LightGBM ili XGBoost jer dobro rade sa strukturiranim značajkama.
-        \item Sustav treba redovito ponovno trenirati jer se botovi i generativni modeli brzo mijenjaju.
-    \end{itemize}
+    \vspace{7mm}
+    \Large
+    \[
+        p_{\mathrm{meta}}(t) \in [0,1]
+    \]
+
+    \normalsize
+    Završni izlaz nije samo oznaka, nego procjena vjerojatnosti AI autorstva.
 \end{frame}
 
 \begin{frame}{Zaključak}
     \begin{itemize}
-        \item Bot promet raste i već čini velik dio interneta.
-        \item Naš odabrani problem je detekcija AI-generiranih Reddit komentara samo iz teksta.
-        \item TF-IDF + logistička regresija daje brz, lokalno izvediv i mjerljiv baseline.
-        \item Na test skupu postiže oko 98\% accuracy, ali rezultat treba interpretirati uz ograničenja skupa podataka.
-        \item Najjače rješenje je kombinacija više tekstualnih komponenti, a ne oslanjanje na jedan signal.
+        \item Koristimo točno tri bazna modela: semantički SVM, stablasti model i TF-IDF logističku regresiju.
+        \item Modeli gledaju različite signale: značenje, strukturu i lokalne tekstualne obrasce.
+        \item Stacking meta-model kombinira njihove vjerojatnosti preko logita, interakcija i kvadratnih članova.
+        \item Završni model postiže najbolji rezultat: dev accuracy $0.98406$, test accuracy $0.98406$.
+        \item Sustav procjenjuje vjerojatnost AI-generiranosti komentara, a ne dokazuje identitet autora.
     \end{itemize}
 \end{frame}
 

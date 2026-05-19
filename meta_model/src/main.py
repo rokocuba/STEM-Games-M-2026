@@ -4,7 +4,7 @@ import argparse
 import json
 import sys
 from datetime import datetime
-from pathlib import Path
+from pathlib import Path, PureWindowsPath
 
 import joblib
 import numpy as np
@@ -36,9 +36,12 @@ INT_TO_LABEL = {0: "HUMAN", 1: "AI"}
 EPSILON = 1e-5
 
 TREE_DIR = PROJECT_ROOT / "Tree_Based_Model"
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
 if str(TREE_DIR) not in sys.path:
     sys.path.insert(0, str(TREE_DIR))
 
+from semantic_svm.embedding_extractor import EmbeddingExtractor, resolve_model_name  # noqa: E402
 from sentence_category_factcheck import (
     CATEGORIES,
     compute_comment_metrics,
@@ -162,19 +165,74 @@ def compute_tree_features(comments: pd.Series) -> np.ndarray:
     return np.asarray(rows, dtype=np.float32)
 
 
+def resolve_artifact_path(path_value: str, manifest_path: Path) -> Path:
+    path = Path(path_value)
+    if path.exists():
+        return path
+
+    if not path.is_absolute():
+        relative_to_manifest = manifest_path.parent / path
+        if relative_to_manifest.exists():
+            return relative_to_manifest
+
+        relative_to_root = PROJECT_ROOT / path
+        if relative_to_root.exists():
+            return relative_to_root
+
+    windows_path = PureWindowsPath(path_value)
+    if windows_path.name:
+        local_embedding_path = manifest_path.parent / "embeddings" / windows_path.name
+        if local_embedding_path.exists():
+            return local_embedding_path
+
+    return path
+
+
 def load_embeddings(
-    manifest_path: Path, max_rows: int | None = None
+    manifest_path: Path,
+    comments_by_split: dict[str, pd.Series],
+    batch_size: int,
+    device: str | None,
+    model_cache_dir: Path | None,
 ) -> dict[str, np.ndarray]:
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     embeddings: dict[str, np.ndarray] = {}
+    extractor: EmbeddingExtractor | None = None
+
     for split_name in ("train", "dev", "test"):
         cache_key = f"{split_name}_cache"
         cache_path_value = manifest.get(cache_key)
-        if not cache_path_value:
+        if cache_path_value:
+            cache_path = resolve_artifact_path(str(cache_path_value), manifest_path)
+            if cache_path.exists():
+                embeddings[split_name] = np.load(cache_path, mmap_mode="r")
+                continue
+
+            log(
+                f"Embedding cache for {split_name} not found at {cache_path_value}; "
+                "generating it from CSV comments"
+            )
+
+        if split_name not in comments_by_split:
             continue
-        cache_path = Path(cache_path_value)
-        array = np.load(cache_path, mmap_mode="r")
-        embeddings[split_name] = array[:max_rows] if max_rows is not None else array
+
+        if extractor is None:
+            model_name = resolve_model_name(
+                str(manifest.get("embedding_model", "sentence-transformers/all-MiniLM-L6-v2"))
+            )
+            log(f"Loading embedding model: {model_name}")
+            extractor = EmbeddingExtractor(
+                model_name=model_name,
+                device=device,
+                cache_folder=model_cache_dir,
+            )
+
+        embeddings[split_name] = extractor.encode(
+            comments_by_split[split_name].tolist(),
+            batch_size=batch_size,
+            show_progress=True,
+        )
+
     return embeddings
 
 
@@ -399,6 +457,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--random-state", type=int, default=42)
     parser.add_argument("--svm-calibration-cv", type=int, default=3)
     parser.add_argument("--n-jobs", type=int, default=1)
+    parser.add_argument("--embedding-batch-size", type=int, default=64)
+    parser.add_argument("--embedding-device", type=str, default=None)
+    parser.add_argument("--embedding-model-cache-dir", type=Path, default=None)
     parser.add_argument("--max-train-rows", type=int, default=None)
     parser.add_argument("--max-dev-rows", type=int, default=None)
     parser.add_argument("--max-test-rows", type=int, default=None)
@@ -428,8 +489,20 @@ def main() -> None:
         json.dumps(tf_joblib_summary, indent=2), encoding="utf-8"
     )
 
+    comments_by_split = {
+        "train": train_comments,
+        "dev": dev_comments,
+        "test": test_comments,
+    }
+
     log("Loading cached semantic SVM embeddings")
-    embeddings = load_embeddings(args.svm_embedding_manifest)
+    embeddings = load_embeddings(
+        args.svm_embedding_manifest,
+        comments_by_split=comments_by_split,
+        batch_size=args.embedding_batch_size,
+        device=args.embedding_device,
+        model_cache_dir=args.embedding_model_cache_dir,
+    )
     if args.max_train_rows is not None:
         embeddings["train"] = embeddings["train"][: args.max_train_rows]
     if args.max_dev_rows is not None:
@@ -454,11 +527,6 @@ def main() -> None:
             )
 
     log("Computing tree-based structural features")
-    comments_by_split = {
-        "train": train_comments,
-        "dev": dev_comments,
-        "test": test_comments,
-    }
     tree_features_by_split = {
         split_name: compute_tree_features(comments)
         for split_name, comments in comments_by_split.items()
