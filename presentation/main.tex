@@ -9,7 +9,7 @@
 \pgfplotsset{compat=1.18}
 
 \usetheme{Madrid}
-\usecolortheme{seahorse}
+\usecolortheme{default}
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{caption}[numbered]
 
@@ -24,23 +24,55 @@
     \titlepage
 \end{frame}
 
-\begin{frame}{Problem koji rješavamo}
+\begin{frame}{Uvod}
     \begin{itemize}
-        \item Fokusiramo se na komentare na Redditu: ulaz je samo tekst komentara.
-        \item Cilj je binarna klasifikacija: \textbf{HUMAN} ili \textbf{AI}.
-        \item Ne koristimo metapodatke: nema korisničke povijesti, karme, vremena objave ni IP adrese.
-        \item To čini zadatak realističnim za lokalni alat, ali teži jer model mora prepoznati samo jezične tragove.
+    \item Društvene mreže -- danas više od 5,4 milijarde korisnika
+    \item Značaj dio prometa čine botovi (good i bad)
+    \item Problem bad botova -- ozbiljna društvena prijetnja
+    \item Spam, phishing, manipulacija raspravama i umjetno povećanje
+angažmana
+    \item Dead internet theory
+
     \end{itemize}
 \end{frame}
 
-\begin{frame}{Zašto je rast botova važan?}
-    \begin{itemize}
-        \item Procjenjuje se da velik dio sadržaja na društvenim mrežama više ne pišu ljudi.
-        \item Botovi se koriste za spam, phishing, manipulaciju raspravama i umjetno povećanje angažmana.
-        \item Chatbotovi mogu proizvoditi uvjerljive komentare u velikoj količini i malom vremenu.
-        \item Ako se automatizirani sadržaj ne označi, korisnici teže procjenjuju kome i čemu mogu vjerovati.
-    \end{itemize}
+\begin{frame}{Ukupan udio botova na webu}
+    \centering
+    \begin{center}
+    \begin{tikzpicture}
+        \begin{axis}[
+            title={Ukupan udio botova (Bad + Good Bots)},
+            xlabel={Godina},
+            ylabel={Udio prometa (\%)},
+            xmin=2012, xmax=2028,
+            ymin=30, ymax=65,
+            xticklabel style={/pgf/number format/set thousands separator={}},
+            xtick={2013, 2015, 2017, 2019, 2021, 2023, 2025, 2027},
+            grid=both,
+            minor tick num=1,
+            legend pos=north west,
+            width=0.88\textwidth,
+            height=0.62\textheight,
+        ]
+            \addplot[teal, only marks, mark=square*, mark size=2pt] coordinates {
+                (2013, 43.0) (2014, 57.1) (2015, 45.6) (2016, 38.7)
+                (2017, 42.2) (2018, 37.9) (2019, 37.2) (2020, 40.8)
+                (2021, 42.3) (2022, 47.4) (2023, 49.6) (2024, 51.0)
+                (2025, 53.0)
+            };
+            \addlegendentry{Ukupni podaci}
+
+            \addplot[orange, ultra thick, domain=2013:2028, samples=100] {0.15814*x^2 - 639.186*x + 645164};
+            \draw[magenta, dashed, line width=1pt] (axis cs:2012,50) -- (axis cs:2028,50) node[pos=0.1, above, scale=0.7]{50\%};
+        \end{axis}
+    \end{tikzpicture}
+    
+    \vspace{1mm}
+        {\tiny Izvor: Statista, Human and bot web traffic share}
+    \end{center}
 \end{frame}
+
+
 
 \begin{frame}{Uspon ``bad bot'' prometa}
     \centering
@@ -70,53 +102,15 @@
             \addplot[red, ultra thick, domain=2013:2027.5, samples=100] {0.21*(x-2015.5)^2 + 19.5};
             \addlegendentry{Trend rasta}
             \draw[magenta, dashed, line width=1pt] (axis cs:2012,50) -- (axis cs:2028,50) node[pos=0.9, above, scale=0.7]{50\%};
+            
         \end{axis}
     \end{tikzpicture}
-\end{frame}
-
-\begin{frame}{Ukupan udio botova na webu}
-    \centering
-    \begin{tikzpicture}
-        \begin{axis}[
-            title={Ukupan udio botova (Bad + Good Bots)},
-            xlabel={Godina},
-            ylabel={Udio prometa (\%)},
-            xmin=2012, xmax=2028,
-            ymin=30, ymax=65,
-            xticklabel style={/pgf/number format/set thousands separator={}},
-            xtick={2013, 2015, 2017, 2019, 2021, 2023, 2025, 2027},
-            grid=both,
-            minor tick num=1,
-            legend pos=north west,
-            width=0.88\textwidth,
-            height=0.62\textheight,
-        ]
-            \addplot[teal, only marks, mark=square*, mark size=2pt] coordinates {
-                (2013, 43.0) (2014, 57.1) (2015, 45.6) (2016, 38.7)
-                (2017, 42.2) (2018, 37.9) (2019, 37.2) (2020, 40.8)
-                (2021, 42.3) (2022, 47.4) (2023, 49.6) (2024, 51.0)
-                (2025, 53.0)
-            };
-            \addlegendentry{Ukupni podaci}
-
-            \addplot[orange, ultra thick, domain=2013:2028, samples=100] {0.15814*x^2 - 639.186*x + 645164};
-            \addlegendentry{Kvadratna regresija}
-            \draw[magenta, dashed, line width=1pt] (axis cs:2012,50) -- (axis cs:2028,50) node[pos=0.1, above, scale=0.7]{50\%};
-        \end{axis}
-    \end{tikzpicture}
-
+    
     \vspace{1mm}
     {\tiny Izvor: Statista, Human and bot web traffic share}
 \end{frame}
 
-\begin{frame}{Interpretacija trenda}
-    \begin{itemize}
-        \item Anomalija iz 2014. povezana je s masovnim sigurnosnim skeniranjima kao što su Heartbleed i Shellshock.
-        \item Nakon toga dolazi pad zbog boljih sustava zaštite i optimizacije rada tražilica.
-        \item Novi rast potiču automatizirani alati, scraping, API napadi i generativni AI.
-        \item Zato se naš problem svodi na lokalno pitanje: može li se pojedini komentar označiti kao ljudski ili AI-generiran?
-    \end{itemize}
-\end{frame}
+
 
 \begin{frame}{Ključne metrike bot prometa}
     \centering
@@ -137,6 +131,17 @@
 
     \vspace{2mm}
     {\tiny Izvor: Thales/Imperva, Bad Bot Report 2026}
+\end{frame}
+
+
+\begin{frame}{Projekt}
+    \begin{itemize}
+        \item  Detekcija i procjena vjerojatnosti AI generiranih komentara i objava
+        \item Stvaramo sustav koji spaja tri komplementarna pogleda u ansambl modela (ensemble learning)
+        \item Semantički pogled na značenje komentara, strukturni pogled na gradu rečenica i interpunkciju te
+leksički pogled na riječi, tokene i kratke znakovne obrasce
+        \item Završni stacking meta-model (kombinira 3 podsustava)
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{Naš detekcijski sustav}
