@@ -1,6 +1,6 @@
 const MIN_CHARS = 120;
 const AI_THRESHOLD = 0.85;
-const POSSIBLE_THRESHOLD = 0.65;
+const POSSIBLE_THRESHOLD = 0.5;
 
 const seen = new WeakSet();
 
@@ -57,6 +57,15 @@ function addBadge(commentNode, result) {
   if (!result?.ok) return;
 
   const score = result.score;
+
+  console.log(result);
+
+  console.log(result.label);
+  console.log(score);
+
+  if (result.label == "HUMAN") {
+    return;
+  }
 
   let label = null;
   if (score >= AI_THRESHOLD) {
