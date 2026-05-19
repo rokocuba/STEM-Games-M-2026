@@ -1,0 +1,145 @@
+\subsection{Stacking meta-model kao završni podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Tri prethodna podsustava promatraju komentar iz različitih kutova. Semantički SVM opisuje značenje komentara, stablasti model opisuje njegovu strukturu, a TF-IDF logistička regresija hvata lokalne leksičke i znakovne obrasce. Nijedan od tih pogleda nije sam po sebi potpun. Zato završni model ne pokušava ponovno analizirati sirovi tekst, nego uči kako kombinirati njihove tri vjerojatnosne procjene. Time se problem svodi na kontrolirano pitanje: kada vjerovati kojem podsustavu i što učiniti kada se njihovi izlazi međusobno slažu ili razilaze.
+
+Za komentar $t$ bazni podsustavi daju tri vrijednosti
+
+\[
+p_{\mathrm{sem}}(t),
+\qquad
+p_{\mathrm{tree}}(t),
+\qquad
+p_{\mathrm{tf}}(t),
+\]
+
+pri čemu svaka vrijednost pripada intervalu $[0,1]$ i predstavlja procjenu vjerojatnosti da je komentar AI-generiran. Završni cilj je naučiti funkciju
+
+\[
+p_{\mathrm{meta}}(t) \approx P(y=1\mid p_{\mathrm{sem}},p_{\mathrm{tree}},p_{\mathrm{tf}}),
+\]
+
+gdje $y=1$ označava razred \texttt{AI}.
+
+\paragraph{Out-of-fold predikcije.}
+Najvažniji tehnički dio ovoga podsustava jest način na koji se trenira završni model. Meta-model ne smije učiti na predikcijama baznih modela koje su dobivene na istim primjerima na kojima su ti bazni modeli trenirani. U suprotnom bi ulazi meta-modela bili preoptimistični i ne bi dobro opisivali ponašanje na neviđenim komentarima.
+
+Zato se koristi out-of-fold postupak. Skup za učenje dijeli se na $K=5$ stratificiranih dijelova. Za svaki fold treniraju se tri bazna modela na preostalih $K-1$ dijelova, a zatim se njihove vjerojatnosti računaju na izostavljenom dijelu. Nakon svih foldova svaki primjer iz skupa za učenje ima trojku
+
+\[
+\bigl(p_{\mathrm{sem}},p_{\mathrm{tree}},p_{\mathrm{tf}}\bigr)
+\]
+
+dobivenu od modela koji taj primjer nije vidio tijekom treniranja. Tek se na tim OOF predikcijama uči logistički meta-model.
+
+\paragraph{Finalni bazni modeli.}
+OOF modeli iz foldova služe samo za izgradnju poštenog skupa za učenje meta-modela. Za završne predikcije koristi se druga faza: jedan finalni semantički SVM, jedan finalni stablasti model i jedan finalni TF-IDF logistički model trenirani na cijelom skupu za učenje. To odgovara varijanti u kojoj se OOF koristi za učenje načina kombiniranja, a zatim se za stvarnu primjenu koriste najjači dostupni bazni modeli, jer su učeni na 100\% podataka.
+
+U trenutnoj provedbi semantički SVM učitava se iz već spremljenog modela, dok se finalni stablasti model i finalni TF-IDF logistički model ponovno treniraju na cijelom \texttt{train.csv}. Time se dobivaju bazne vjerojatnosti za \texttt{dev.csv} i \texttt{test.csv}.
+
+\paragraph{Logit-transformacija i interakcije.}
+Sirove vjerojatnosti najprije se pretvaraju u logit-oblik
+
+\[
+\ell_i = \log\frac{p_i}{1-p_i}.
+\]
+
+U provedbi se prije toga vjerojatnosti režu na interval $[10^{-5},1-10^{-5}]$ kako bi se izbjegle beskonačne vrijednosti. Logit-oblik je prirodniji za logistički završni model, jer pretvara vjerojatnost u log-omjer izgleda.
+
+Ako označimo
+
+\[
+\ell_1=\operatorname{logit}(p_{\mathrm{sem}}),
+\qquad
+\ell_2=\operatorname{logit}(p_{\mathrm{tree}}),
+\qquad
+\ell_3=\operatorname{logit}(p_{\mathrm{tf}}),
+\]
+
+meta-model koristi devet značajki:
+
+\[
+\ell_1,
+\ell_2,
+\ell_3,
+\ell_1\ell_2,
+\ell_1\ell_3,
+\ell_2\ell_3,
+\ell_1^2,
+\ell_2^2,
+\ell_3^2.
+\]
+
+Parne interakcije omogućuju modelu da razlikuje slučajeve u kojima se dva podsustava slažu od slučajeva u kojima jedan model snažno proturječi drugome. Kvadratni članovi dopuštaju drukčije ponašanje kod vrlo sigurnih predikcija nego kod predikcija blizu $0.5$. Trostruki produkt nije uključen, jer bi dodatno povećao složenost bez jasne potrebe u prvom, jednostavnom završnom modelu.
+
+\paragraph{Logistički završni model.}
+Nad navedenim meta-značajkama trenira se logistička regresija. Njezin oblik može se zapisati kao
+
+\[
+p_{\mathrm{meta}}(t)=\sigma\left(
+\beta_0
++\sum_{i=1}^{3}\beta_i\ell_i
++\sum_{i<j}\beta_{ij}\ell_i\ell_j
++\sum_{i=1}^{3}\gamma_i\ell_i^2
+\right),
+\]
+
+gdje je
+
+\[
+\sigma(u)=\frac{1}{1+e^{-u}}.
+\]
+
+Ovaj izbor zadržava model dovoljno jednostavnim za tumačenje, ali mu ipak dopušta osnovne nelinearne odnose među trima baznim vjerojatnostima. U odnosu na malu neuronsku mrežu, ovdje je manji rizik prenaučenosti i lakše je provjeriti kako pojedini ulazi utječu na završnu odluku.
+
+\paragraph{Izlaz podsustava.}
+Završni izlaz meta-modela je jedna vrijednost
+
+\[
+p_{\mathrm{meta}}(t)\in[0,1],
+\]
+
+koja predstavlja konačnu procjenu vjerojatnosti da je komentar AI-generiran. Ako bi se iz te vjerojatnosti htjela dobiti binarna odluka, može se koristiti pravilo
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{meta}}(t)\ge 0.5\}.
+\]
+
+Ipak, kao i kod baznih podsustava, središnji izlaz je sama vjerojatnost, a ne pragom dobivena tvrda odluka.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Usporedba triju baznih modela i završnog meta-modela na razvojnom skupu prikazana je u sljedećoj tablici:
+
+{\small
+\setlength{\tabcolsep}{4pt}
+\begin{center}
+\begin{tabular}{lccccccc}
+\hline
+Model & Točnost & Prec. & Odziv & $F_1$ & AUC & Log-gub. & Brier \\
+\hline
+Semantički SVM & 0.90948 & 0.90341 & 0.91283 & 0.90810 & 0.96885 & 0.22646 & 0.06715 \\
+Stablasti model & 0.90487 & 0.89214 & 0.91664 & 0.90423 & 0.96696 & 0.23115 & 0.07009 \\
+TF-IDF logreg & 0.98085 & 0.98627 & 0.97447 & 0.98033 & 0.99780 & 0.06739 & 0.01626 \\
+Meta-model & 0.98406 & 0.98788 & 0.97949 & 0.98366 & 0.99840 & 0.04564 & 0.01240 \\
+\hline
+\end{tabular}
+\end{center}
+}
+
+Završni meta-model postiže najbolji rezultat po svim navedenim metrikama. Najjači pojedinačni bazni model je TF-IDF logistička regresija, ali kombiniranje triju pogleda dodatno povećava preciznost, odziv, mjeru $F_1$ i kvalitetu vjerojatnosne procjene.
+
+Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 21322 & 249 \\
+y=1 & 425 & 20293
+\end{array}
+\]
+
+U odnosu na pojedinačne bazne modele, završni model poboljšava i klasifikacijske i vjerojatnosne metrike. To pokazuje da tri podsustava ne nose potpuno isti signal: meta-model iz njih može izvući dodatnu informaciju upravo kroz kombiniranje i interakcije.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najjednostavnije poboljšanje bilo bi dodati usporedbu s još jednostavnijim meta-modelom koji koristi samo tri logita bez interakcija. Time bi se jasno izmjerilo koliko stvarno doprinose parne interakcije i kvadratni članovi. Drugi prirodan korak je kalibracijska provjera završnog izlaza, primjerice kroz Brierovu mjeru i pouzdanosnu krivulju. Tek ako bi takav model pokazao sustavnu pogrešku u određenim područjima prostora triju vjerojatnosti, imalo bi smisla pokušati malu neuronsku mrežu.
