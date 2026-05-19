@@ -1,0 +1,13 @@
+feature_x,feature_y,metric,value
+question mark used,sentences per paragraph,overall_pearson_r,0.317726251763
+question mark used,sentences per paragraph,human_pearson_r,0.117096049581
+question mark used,sentences per paragraph,ai_pearson_r,0.149087167825
+question mark used,sentences per paragraph,overall_x_rate,0.433994578298
+question mark used,sentences per paragraph,human_x_rate,0.219153860672
+question mark used,sentences per paragraph,ai_x_rate,0.657685704238
+question mark used,sentences per paragraph,overall_y_mean_when_x1,4.412941337655
+question mark used,sentences per paragraph,overall_y_mean_when_x0,2.773470364490
+question mark used,sentences per paragraph,human_y_mean_when_x1,2.814682182463
+question mark used,sentences per paragraph,human_y_mean_when_x0,2.085019664124
+question mark used,sentences per paragraph,ai_y_mean_when_x1,4.967452235481
+question mark used,sentences per paragraph,ai_y_mean_when_x0,4.408574579483

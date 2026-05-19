@@ -1,0 +1,90 @@
+\subsection{Stablasti model kao podsustav klasifikacije}
+
+\paragraph{Motivacija.}
+Ovaj podsustav polazi od drukčije pretpostavke od semantičkog SVM-a. Ovdje se ne traži primarno što komentar \emph{znači}, nego \emph{kako je građen}. U praksi se pokazuje da se mnogi AI-generirani komentari razlikuju po makro-strukturi, ritmu rečenica i interpunkcijskoj uporabi: češće su dulji, imaju više rečenica po odlomku, više upitnika, više apostrofa, veću varijabilnost duljine rečenica i češće koriste obrasce koji potiču nastavak interakcije. S druge strane, ljudski komentari češće zadržavaju neke obrasce koji su manje ``angažmanski agresivni'', primjerice zagrade, točku-zarez, dvotočku ili brojčane reference. Zbog toga ima smisla zasebno modelirati strukturni sloj komentara i dopustiti stablastom modelu da upravo na takvim pravilima gradi odluku.
+
+\paragraph{Ulazne značajke.}
+Svaki se komentar prevodi u vektor
+
+\[
+x \in \mathbb{R}^{20},
+\]
+
+pri čemu komponente vektora opisuju rečenične i odlomkovne heuristike. Među njima su: broj rečenica po odlomku, broj riječi po odlomku, prisutnost desne zagrade, crtice, točke-zareza ili dvotočke, upitnika i apostrofa, standardna devijacija duljine rečenica, prosječna razlika duljina uzastopnih rečenica, prisutnost vrlo kratkih i vrlo dugih rečenica te binarni pokazatelji za izraze poput \texttt{although}, \texttt{however}, \texttt{but}, \texttt{because}, \texttt{this}, \texttt{others/researchers}, brojeve i \texttt{et}.
+
+Empirijski nalazi iz skupa za učenje potvrđuju da takve značajke nose signal. Korelacija s AI oznakom najveća je za broj rečenica po odlomku $(0.495)$, prisutnost upitnika $(0.442)$, broj riječi po odlomku $(0.414)$, prisutnost riječi \texttt{but} $(0.362)$ i apostrofa $(0.360)$. S druge strane, negativnu korelaciju s AI oznakom imaju prisutnost točke-zareza ili dvotočke $(-0.179)$, desne zagrade $(-0.163)$ i brojčanih referenci $(-0.134)$. To znači da model ne polazi od proizvoljno zadanih pravila, nego od obrazaca koji su u podacima doista uočljivi.
+
+\paragraph{Pojedinačno stablo kao osnovni mehanizam odluke.}
+Ako se promatra jedno stablo odluke, tada se u svakom unutarnjem čvoru provjerava uvjet oblika
+
+\[
+x_k \le \tau,
+\]
+
+gdje je $x_k$ jedna od 20 značajki, a $\tau$ pripadni prag. Ako je uvjet zadovoljen, primjer se šalje u lijevu granu; inače u desnu. Taj se postupak ponavlja sve do lista.
+
+Na razini jednog stabla list sadrži lokalnu procjenu razredne pripadnosti. Ako u listu ima $n_{\mathrm{H}}$ ljudskih i $n_{\mathrm{AI}}$ AI primjera, prirodna procjena AI-vjerojatnosti glasi
+
+\[
+p_{\mathrm{leaf}}(x)=\frac{n_{\mathrm{AI}}}{n_{\mathrm{H}}+n_{\mathrm{AI}}}.
+\]
+
+Upravo je zato pojedinačno stablo vrlo pogodno za objašnjavanje: odluka se može pratiti kao konačan niz pragova nad čitljivim značajkama.
+
+\paragraph{Pojačano stablasto učenje.}
+Stvarna klasifikacijska inačica ovoga podsustava ne koristi jedno stablo, nego pojačani ansambl stabala, konkretno \texttt{HistGradientBoostingClassifier}. Ideja je da se ne traži jedno veliko stablo koje mora samo riješiti cijeli problem, nego niz plitkih stabala koja se nadovezuju jedno na drugo i postupno ispravljaju prethodne pogreške.
+
+Ako je s $T_m(x)$ označen doprinos $m$-tog stabla, tada se ukupni odlučni rezultat može zapisati u obliku
+
+\[
+F_M(x)=\beta_0 + \eta \sum_{m=1}^{M} T_m(x),
+\]
+
+gdje je $\beta_0$ početni član, $\eta$ stopa učenja, a $M$ broj stabala. Za binarnu klasifikaciju zatim se iz toga rezultata dobiva AI-vjerojatnost logističkom preslikbom
+
+\[
+p_{\mathrm{tree}}(x)=\frac{1}{1+e^{-F_M(x)}}.
+\]
+
+U ovoj provedbi koriste se parametri \texttt{max\_depth=5}, \texttt{learning\_rate=0.06}, \texttt{max\_iter=300} i \texttt{min\_samples\_leaf=15}, uz rano zaustavljanje na izdvojenom dijelu skupa za učenje. Histogramska varijanta dodatno ubrzava učenje tako što kontinuirane značajke najprije grupira u binove, pa se pragovi više ne traže nad svim mogućim realnim vrijednostima, nego nad histogramiziranim prikazom podataka.
+
+\paragraph{Zašto je stablasta metoda ovdje prikladna.}
+Ovakav model ima dvije važne prednosti. Prvo, može prirodno modelirati nelinearne interakcije među značajkama. Nije isto je li komentar dug sam po sebi ili je istodobno dug, pun upitnika i s velikom varijabilnošću duljine rečenica; stablo i ansambl stabala takve kombinacije hvataju mnogo prirodnije od jedne linearne granice. Drugo, stablasti modeli ne zahtijevaju standardizaciju značajki na isti način kao linearni modeli, jer odluku temelje na usporedbi s pragovima, a ne na udaljenosti u linearnom prostoru.
+
+\paragraph{Odnos između glavnog modela i objašnjive inačice.}
+Za stvarnu klasifikaciju koristi se pojačani model, jer daje bolji rezultat na razvojnom skupu. Ipak, u repozitoriju postoji i način rada s jednim \texttt{DecisionTreeClassifier}-om. Ta inačica nije uvedena zato što je točnija, nego zato što omogućuje doslovan prolaz od korijena do lista za pojedini komentar. Time se dobiva egzaktan, vizualno čitljiv slijed pravila tipa ``broj rečenica po odlomku $> 2.595$'' ili ``prisutan upitnik'', što je korisno kada se želi objasniti jednu konkretnu odluku.
+
+\paragraph{Izlaz podsustava.}
+Za komentar $t$ podsustav vraća vjerojatnost
+
+\[
+p_{\mathrm{tree}}(t) \approx P(y=1\mid t),
+\]
+
+gdje $y=1$ ponovno označava razred \texttt{AI}. Kad bi se model koristio samostalno, binarna bi se odluka mogla zadati pravilom
+
+\[
+\hat y = \mathbf{1}\{p_{\mathrm{tree}}(t)\ge 0.5\}.
+\]
+
+U završnom sustavu važniji je sam realni broj $p_{\mathrm{tree}}(t)$ nego tvrda odluka, jer se ta vjerojatnost dalje kombinira s preostalim podsustavima.
+
+\paragraph{Rezultati na razvojnom skupu.}
+Pokretanjem zadanog pojačanog modela nad skupovima \texttt{train.csv} i \texttt{dev.csv} dobivene su vrijednosti točnosti $0.9049$, uravnotežene točnosti $0.9051$, preciznosti $0.8921$, odziva $0.9166$, mjere $F_1=0.9042$ i pokazatelja $\mathrm{ROC\ AUC}=0.9670$. Konfuzijska matrica na razvojnom skupu iznosi
+
+\[
+\begin{array}{c|cc}
+ & \hat y=0 & \hat y=1 \\
+\hline
+y=0 & 19275 & 2296 \\
+y=1 & 1727 & 18991
+\end{array}
+\]
+
+što pokazuje da model vrlo dobro razdvaja razrede i pritom zadržava vrlo snažnu sposobnost rangiranja.
+
+\paragraph{Važnost značajki.}
+Permutacijska važnost značajki potvrđuje da odluka modela nije raspodijeljena ravnomjerno po svim ulazima. Najveći doprinos imaju broj riječi po odlomku $(0.1632)$ i broj rečenica po odlomku $(0.0873)$, a zatim prisutnost apostrofa $(0.0182)$, upitnika $(0.0173)$, standardna devijacija duljine rečenica $(0.0146)$ i razlika duljina uzastopnih rečenica $(0.0089)$. Među važnijim signalima pojavljuju se još brojčane reference $(0.0072)$, desna zagrada $(0.0070)$, crtica $(0.0044)$ i točka-zarez ili dvotočka $(0.0036)$. To je u skladu s ranijom korelacijskom analizom: model najveću težinu daje upravo onim strukturnim obilježjima na kojima se AI i HUMAN komentari u podacima najjasnije razilaze.
+
+\paragraph{Mogućnost jednostavnog poboljšanja.}
+Najjednostavniji put do jače inačice ovoga podsustava nije zamjena samog klasifikatora, nego proširenje ulaznog skupa značajki. U istom direktoriju već postoje dodatne analize koje bilježe makro-strukturna pravila, prijelazne fraze, obrasce obraćanja, retoričke prijelaze i slične obrasce, ali ti signali još nisu svi uključeni u završni 20-dimenzionalni vektor na kojem se model trenira. Stoga je prirodan sljedeći korak ugraditi takve već izmjerene značajke u funkciju za ekstrakciju obilježja i zatim ponovno istrenirati isti pojačani model. To je tehnički jednostavno, a ima smisla upravo zato što su mnoge od tih razlika već empirijski potvrđene u pripadnim artefaktima.

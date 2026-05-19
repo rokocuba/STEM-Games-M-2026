@@ -1,0 +1,11 @@
+label,feature,total_count,comments,mean_per_comment
+HUMAN,Emotion interjections (!),183,100669,0.0018178386593688226
+HUMAN,"Transition phrases (,)",2455,100669,0.024386851960385023
+HUMAN,"Polite refusals (,-)",2,100669,1.9867089173429754e-05
+HUMAN,"Greetings / direct address (,:)",616,100669,0.006119063465416364
+HUMAN,Rhetorical pivots (:),21,100669,0.00020860443632101243
+AI,Emotion interjections (!),403,96686,0.004168131890863206
+AI,"Transition phrases (,)",4724,96686,0.04885919367850568
+AI,"Polite refusals (,-)",90,96686,0.0009308483130960015
+AI,"Greetings / direct address (,:)",2317,96686,0.02396417268270484
+AI,Rhetorical pivots (:),62,96686,0.000641251060132801
