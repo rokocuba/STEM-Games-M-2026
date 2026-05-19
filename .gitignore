@@ -2,3 +2,5 @@
 __pycache__/
 *.py[cod]
 .prepare_datasets.py
+semantic_svm/artifacts/
+semantic_svm/model_cache/
