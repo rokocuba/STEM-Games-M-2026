@@ -14,11 +14,14 @@
 \usecolortheme{default}
 \setbeamertemplate{navigation symbols}{}
 \setbeamertemplate{caption}[numbered]
+\setbeamertemplate{itemize item}{}
+\setbeamertemplate{itemize subitem}{}
+\setbeamertemplate{itemize subsubitem}{}
 
 \title[Bots and how to catch them]{Bots and how to catch them}
 \subtitle{Detekcija AI-generiranih Reddit komentara}
-\author{STEM Games 2026 -- Mathematics arena x Erste}
-\date{2026}
+\author[ReinFERcement learning]{ReinFERcement learning\\STEM Games 2026 -- Mathematics arena x Erste}
+\date{}
 
 \begin{document}
 
@@ -233,18 +236,42 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
     \end{columns}
 \end{frame}
 
-\begin{frame}{Semantički SVM: margina i rezultati}
+\begin{frame}{Semantički SVM: meka margina}
     \begin{columns}[T]
-        \begin{column}{0.45\textwidth}
+        \begin{column}{0.53\textwidth}
+            \small
             \[
-                \min_{w,b}\;\frac{1}{2}\|w\|_2^2 + C\sum_{i=1}^{n}\max\{0,1-\tilde y_i(w^\top z_i+b)\}
+            \min_{\mathbf{w}, b}\;
+            \frac{1}{2}\|\mathbf{w}\|^2
+            + C \sum_{i=1}^{n} \xi_i
             \]
 
             \[
-                \text{širina margine}=\frac{2}{\|w\|_2}
+            \text{uz uvjete}\qquad
+            y_i(\mathbf{w}^{T}x_i+b)\geq 1-\xi_i,
+            \qquad
+            \xi_i\geq 0.
             \]
+
+            \vspace{2mm}
+            \[
+                \text{širina margine}=\frac{2}{\|\mathbf{w}\|_2}
+            \]
+
+            \footnotesize
+            Varijable $\xi_i$ dopuštaju pogreške i primjere unutar margine; parametar $C$ određuje koliko ih model kažnjava.
         \end{column}
-        \begin{column}{0.51\textwidth}
+        \begin{column}{0.43\textwidth}
+            \centering
+            \includegraphics[width=\textwidth,height=0.62\textheight,keepaspectratio]{svm_margin.png}
+        \end{column}
+    \end{columns}
+\end{frame}
+
+\begin{frame}{Semantički SVM: rezultati}
+    \centering
+    \begin{columns}[T]
+        \begin{column}{0.47\textwidth}
             \centering
             \small
             \begin{tabular}{@{}lc@{}}
@@ -256,8 +283,10 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
                 $F_1$ & 0.90810 \\
                 ROC AUC & 0.96885 \\ \bottomrule
             \end{tabular}
-
-            \vspace{2mm}
+        \end{column}
+        \begin{column}{0.47\textwidth}
+            \centering
+            \small
             \begin{tabular}{@{}lcc@{}}
                 \toprule
                 & $\hat y=0$ & $\hat y=1$ \\ \midrule
@@ -294,6 +323,14 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
             \small \texttt{HistGradientBoostingClassifier}: dubina 5, stopa učenja 0.06, 300 iteracija.
         \end{column}
     \end{columns}
+\end{frame}
+
+\begin{frame}{Stablasti model: heurističke značajke}
+    \centering
+    \includegraphics[width=0.96\textwidth,height=0.70\textheight,keepaspectratio]{tree_features.png}
+
+    \vspace{1mm}
+    {\tiny Motivacija značajki: rečenična i odlomkovna struktura te diskurzivni signali. Izvor: \href{https://pmc.ncbi.nlm.nih.gov/articles/PMC10328544/\#S2}{PMC10328544, odjeljak S2}.}
 \end{frame}
 
 \begin{frame}{Stablasti model: najvažnije značajke}
@@ -366,24 +403,21 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
 \end{frame}
 
 \begin{frame}{TF-IDF logistička regresija: odluka i gubitak}
-    \begin{columns}[T]
-        \begin{column}{0.48\textwidth}
-            \[
-                s_c(x)=w_c^\top x+b_c
-            \]
+    \centering
+    \[
+        s_c(x)=w_c^\top x+b_c
+    \]
 
-            \[
-                p_{\mathrm{tf}}(t)=\frac{\exp(s_{\texttt{AI}}(x(t)))}{\exp(s_{\texttt{AI}}(x(t)))+\exp(s_{\texttt{HUMAN}}(x(t)))}
-            \]
-        \end{column}
-        \begin{column}{0.48\textwidth}
-            \[
-                \min_w\sum_{i=1}^{n}\alpha_{y_i}\left[-y_i\log p_i-(1-y_i)\log(1-p_i)\right]+\lambda\|w\|_2^2
-            \]
+    \[
+        p_{\mathrm{tf}}(t)=\frac{\exp(s_{\texttt{AI}}(x(t)))}
+        {\exp(s_{\texttt{AI}}(x(t)))+\exp(s_{\texttt{HUMAN}}(x(t)))}
+    \]
 
-            \small Koristi se \texttt{class\_weight=balanced}; rjeđi razred dobiva veću težinu u gubitku.
-        \end{column}
-    \end{columns}
+    \[
+        \min_w
+        \sum_{i=1}^{n}\alpha_{y_i}\left[-y_i\log p_i-(1-y_i)\log(1-p_i)\right]
+        +\lambda\|w\|_2^2
+    \]
 \end{frame}
 
 \begin{frame}{TF-IDF logistička regresija: rezultati}
@@ -411,7 +445,6 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
             \end{tabular}
 
             \vspace{3mm}
-            \small Najjači pojedinačni bazni model.
         \end{column}
     \end{columns}
 \end{frame}
@@ -540,6 +573,65 @@ leksički pogled na riječi, tokene i kratke znakovne obrasce
 
     \normalsize
     Završni izlaz nije samo oznaka, nego procjena vjerojatnosti AI autorstva.
+\end{frame}
+
+\section{Aplikacija}
+
+\begin{frame}{Arhitektura aplikacije}
+    \centering
+    \begin{tikzpicture}[every node/.style={font=\small, align=center}]
+        \node[draw, rounded corners, fill=blue!10, minimum width=3.2cm, minimum height=9mm] (reddit) at (0,2.25) {Reddit stranica};
+        \node[draw, rounded corners, fill=orange!15, minimum width=3.5cm, minimum height=9mm] (ext) at (4.5,0.65) {Chrome ekstenzija};
+        \node[draw, rounded corners, fill=green!12, minimum width=3.5cm, minimum height=9mm] (api) at (2.8,-2.35) {FastAPI servis};
+        \node[draw, rounded corners, fill=red!10, minimum width=3.8cm, minimum height=9mm] (model) at (-2.8,-2.35) {AI/HUMAN model};
+        \node[draw, rounded corners, fill=gray!12, minimum width=3.8cm, minimum height=9mm] (badge) at (-4.5,0.65) {Badge na komentaru};
+
+        \draw[->, thick] (reddit) -- node[above right]{tekst komentara} (ext);
+        \draw[->, thick] (ext) -- node[right]{lokalni zahtjev} (api);
+        \draw[->, thick] (api) -- node[below]{$p(\texttt{AI})$} (model);
+        \draw[->, thick] (model) -- node[left]{oznaka} (badge);
+        \draw[->, thick] (badge) -- node[above left]{prikaz} (reddit);
+    \end{tikzpicture}
+
+    \vspace{4mm}
+    {\small Ekstenzija samo prikazuje rezultat; klasifikacija se izvodi lokalno u FastAPI aplikaciji.}
+\end{frame}
+
+\begin{frame}{Demo ekstenzije: mogući AI komentar}
+    \centering
+    \includegraphics[width=0.98\textwidth,height=0.82\textheight,keepaspectratio]{AI-possibly.png}
+\end{frame}
+
+\begin{frame}{Demo ekstenzije: visoka AI sigurnost}
+    \centering
+    \includegraphics[width=0.98\textwidth,height=0.82\textheight,keepaspectratio]{AI-sure.png}
+\end{frame}
+
+\begin{frame}{Širenje pristupa}
+    \centering
+    \begin{tikzpicture}[every node/.style={font=\small, align=center}]
+        \node[draw, rounded corners, fill=blue!10, minimum width=2.7cm, minimum height=9mm] (reddit) at (-4.8,1.3) {Reddit};
+        \node[draw, rounded corners, fill=orange!15, minimum width=3.1cm, minimum height=9mm] (social) at (0,1.3) {Druge društvene mreže};
+        \node[draw, rounded corners, fill=green!12, minimum width=3.0cm, minimum height=9mm] (web) at (4.8,1.3) {Bilo koja web stranica};
+        \node[draw, rounded corners, fill=red!10, minimum width=4.0cm, minimum height=10mm] (sms) at (0,-1.1) {SMS poruke};
+
+        \draw[->, thick] (reddit) -- (social);
+        \draw[->, thick] (social) -- (web);
+        \draw[->, thick] (social) -- (sms);
+    \end{tikzpicture}
+
+    \vspace{4mm}
+    {\small Isti princip: tekst $\rightarrow$ modeli $\rightarrow$ procjena rizika / AI autorstva.}
+\end{frame}
+
+\begin{frame}{Što bi trebalo za produkcijsko skaliranje}
+    \begin{itemize}
+        \item veći i raznolikiji dataset
+        \item jači modeli
+        \item jači hardver
+        \item testiranje na različitim platformama i jezicima
+        \item arhitektura ostaje ista
+    \end{itemize}
 \end{frame}
 
 \begin{frame}{Zaključak}
