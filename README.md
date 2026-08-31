@@ -81,7 +81,7 @@ The third subsystem treats the comment as a character sequence and looks for loc
 
 Two TF-IDF representations are combined in a `FeatureUnion`: word unigrams and bigrams, and character $n$-grams of length 3 to 5. Sublinear frequency scaling is on, so the weight of feature $g$ in comment $t$ is
 
-$$\operatorname{tf}(t,g) = 1 + \log c_{t,g}, \qquad \operatorname{idf}(g) = \log\frac{1+N}{1+\operatorname{df}(g)} + 1$$
+$$\mathrm{tf}(t,g) = 1 + \log c_{t,g}, \qquad \mathrm{idf}(g) = \log\frac{1+N}{1+\mathrm{df}(g)} + 1$$
 
 with the product L2-normalized afterwards. In the model saved for stacking, the word vocabulary holds 793,698 entries and the character vocabulary 763,983, for $d = 1{,}557{,}681$ sparse features in total. The dimension is large, but each comment activates a small part of it.
 
@@ -107,7 +107,7 @@ The three probabilities are clipped to $[10^{-5},\, 1-10^{-5}]$ and mapped to lo
 
 $$\phi(t) = \left[\ell_1,\, \ell_2,\, \ell_3,\, \ell_1\ell_2,\, \ell_1\ell_3,\, \ell_2\ell_3,\, \ell_1^2,\, \ell_2^2,\, \ell_3^2\right]$$
 
-$$p_{\mathrm{meta}}(t) = \sigma\left( \beta_0 + \sum_{i=1}^{3}\beta_i \ell_i + \sum_{i<j}\beta_{ij}\ell_i\ell_j + \sum_{i=1}^{3}\gamma_i \ell_i^2 \right)$$
+$$p_{\mathrm{meta}}(t) = \sigma\left( \beta_0 + \sum_{i=1}^{3}\beta_i \ell_i + \sum_{i \lt j}\beta_{ij}\ell_i\ell_j + \sum_{i=1}^{3}\gamma_i \ell_i^2 \right)$$
 
 The pairwise interactions let the model separate the case where two subsystems agree from the case where one contradicts another, and the squared terms let it behave differently on confident predictions than near 0.5. The triple product was left out deliberately, since it adds a degree of freedom with no clear need for it in a first combiner.
 
